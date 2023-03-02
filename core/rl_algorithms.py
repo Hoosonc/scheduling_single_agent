@@ -18,7 +18,7 @@ class PPOClip:
         self.entropy = None
 
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr_v)
-        self.scheduler = StepLR(self.optimizer, step_size=300, gamma=0.9)
+        self.scheduler = StepLR(self.optimizer, step_size=100, gamma=0.88)
 
     def learn(self, state_batch, batch_edges, batch_edge_attrs, action_batch, return_batch,
               old_value_batch, old_log_prob_batch, adv_batch):
