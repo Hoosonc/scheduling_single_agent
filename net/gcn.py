@@ -13,7 +13,7 @@ from torch_geometric.nn import GATConv
 # from torch_geometric.nn import GCNConv, GATConv, GINConv, GIN, GCN
 import torch.nn.functional as f
 from torch.distributions.categorical import Categorical
-from net.utils import normalized_columns_initializer, weights_init
+# from net.utils import normalized_columns_initializer, weights_init
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -23,7 +23,7 @@ class GCN(torch.nn.Module):
         super(GCN, self).__init__()
         # torch.manual_seed(2022)
         self.reg_num = reg_num
-        self.conv1 = GATConv(in_channels=4, out_channels=2, heads=2)
+        self.conv1 = GATConv(in_channels=3, out_channels=2, heads=2)
         # self.conv1 = GCNConv(4, 2)
         # self.conv1 = GIN(2, 4, num_layers=2)
         self.conv2 = GATConv(in_channels=4, out_channels=1, heads=2)

@@ -9,6 +9,7 @@
 from core.env import Environment
 import numpy as np
 import torch
+
 # import gc
 # import torch.optim as opt
 import csv
@@ -40,7 +41,7 @@ class Trainer:
         # self.optimizer = opt.Adam(self.param, lr=args.lr)
         self.total_time = 0
         self.min_idle_time = 999999
-        self.min_total_time = 1747
+        self.min_total_time = 1943
         self.scheduled_data = []
         self.file_name = ""
         self.reward_list = []
@@ -54,9 +55,7 @@ class Trainer:
         steps = 0
         update_episode = 0
         for episode in range(1, self.args.episode + 1):
-            # gc.collect()
-            # torch.cuda.empty_cache()
-            # self.model.edge_list.append(torch.from_numpy(np.array(self.env.edge, dtype="int64").T))
+
             sum_reward = []
             for step in range(self.args.num_steps):
                 steps += 1
@@ -101,6 +100,7 @@ class Trainer:
                     p_idle = np.sum(self.patient.total_idle_time)
                     d_idle = np.sum(self.doctor.total_idle_time)
                     total_idle_time = p_idle + d_idle
+                    # assert total_idle_time == self.env.edge_idle.sum()*self.env.max_time
                     # if total_idle_time < self.min_idle_time:
                     #     self.min_idle_time = total_idle_time
                     #     self.scheduled_data = []
@@ -144,7 +144,7 @@ class Trainer:
                         # p_loss = 0.
                         # entropy = 0.
                         for _ in range(0, self.args.batch_num, self.args.update_size):
-                            self.env.reset()
+                            # self.env.reset()
                             batch_states, batch_edges, batch_edge_attrs, batch_actions, batch_returns, \
                                 batch_values, batch_log_prob, batch_adv = \
                                 self.batch_buffer.get_mini_batch(self.args.update_size)
@@ -204,4 +204,4 @@ class Trainer:
     def get_data_edge(self):
         data = self.patient.state.astype("float32")
         edge, edge_attr = self.env.get_edge()
-        return data, np.array(edge, dtype="int64").T, np.array(edge_attr, dtype="float32")
+        return data, edge, edge_attr

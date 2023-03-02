@@ -40,7 +40,9 @@ def transition_time():
 
 
 if __name__ == '__main__':
-    tasks = np.array([[0, 1, 1],
-                      [1, 0, 1],
-                      [1, 1, 0]])
-    print(np.where(tasks>0))
+    tasks = np.array([[0, 2, 3],
+                      [4, 5, 6],
+                      [7, 8, 9]])
+    a = []
+    b = np.array([0, 2])
+    print(tasks.sum())
