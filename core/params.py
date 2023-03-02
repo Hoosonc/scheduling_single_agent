@@ -13,9 +13,9 @@ class Params:
         self.args = self.parser.parse_args()
 
     def get_parser(self):
-        self.parser.add_argument('--lr_v', type=float, default=0.005,
+        self.parser.add_argument('--lr_v', type=float, default=0.001,
                                  help='learning rate (default: 0.0001)')
-        self.parser.add_argument('--epsilon', type=float, default=0.33,
+        self.parser.add_argument('--epsilon', type=float, default=0.3,
                                  help='epsilon (default: 0.3)')
         self.parser.add_argument('--gamma', type=float, default=1,
                                  help='discount factor for rewards (default: 0.99)')

@@ -41,7 +41,7 @@ class Trainer:
         # self.optimizer = opt.Adam(self.param, lr=args.lr)
         self.total_time = 0
         self.min_idle_time = 999999
-        self.min_total_time = 1943
+        self.min_total_time = 1924
         self.scheduled_data = []
         self.file_name = ""
         self.reward_list = []
@@ -62,9 +62,6 @@ class Trainer:
 
                 data, edge, edge_attr = self.get_data_edge()
                 action = self.model.choose_action(data, edge, edge_attr)
-                # CNN 方案
-                # data, edge = self.get_data_edge()
-                # action = self.model.choose_action(data)
 
                 done, reward = env.step(action, step)
                 # print(reward, step)
@@ -169,6 +166,9 @@ class Trainer:
                         self.save_info(self.r_l, f"r_l", ['reward', 'loss', 'ep'], "r_l")
                         self.save_info(self.idle_total, f"i_t", ['d_idle', 'p_idle', 'idle',
                                                                  'total_d', 'total_p', 'total', 'ep'], "i_t")
+                        self.r_l = []
+                        self.idle_total = []
+
                         # self.save_reward_loss("r_l")
                     steps = 0
 
@@ -194,7 +194,7 @@ class Trainer:
             print(f'保存结果文件')
 
     def save_info(self, data_list, file_name, headers, path):
-        with open(f'./data/{path}/{file_name}.csv', mode='w+', encoding='utf-8-sig', newline='') as f:
+        with open(f'./data/{path}/{file_name}.csv', mode='a+', encoding='utf-8-sig', newline='') as f:
             csv_writer = csv.writer(f)
 
             csv_writer.writerow(headers)
