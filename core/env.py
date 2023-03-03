@@ -24,7 +24,7 @@ class Environment:
         self.cla_by_did = None
         self.cla_by_pid = None
         self.reg_num = self.reg_file.shape[0]
-        self.doctor = Doctor(self.doc_file, args)
+        self.doctor = Doctor(self.reg_file, args)
         self.doctor.init_doc_info()
         self.patients = Patient(self.reg_file, args, self.doctor.player_num)
         self.patients.init_patient_info()
@@ -46,8 +46,12 @@ class Environment:
         self.max_time = self.reg_file["pro_time"].sum()
         self.edge_idle = None
         self.edge_connect = None
+        self.edge_mask = None
         self.p_sc_jobs = None
         self.d_sc_jobs = None
+        self.d_tasks = None
+        self.p_tasks = None
+        self.tasks = None
 
     def reset(self):
         self.d_total_time = 0
@@ -59,30 +63,28 @@ class Environment:
         self.reg_detail = shuffle(self.reg_file)
         self.reg_detail["id"] = np.arange(0, self.reg_detail.shape[0])
         self.patients.state = np.concatenate([self.patients.state,
-                                              self.reg_detail["pro_time"].values.reshape(-1, 1) / self.max_time],
+                                              self.reg_detail["pro_time"].values.reshape(-1, 1)],
                                              axis=1)
-        # self.patients.state = np.concatenate([self.patients.state,
-        #                                       self.reg_detail["pid"].values.reshape(-1, 1)],
-        #                                      axis=1)
+        self.patients.state = np.concatenate([self.patients.state,
+                                              self.reg_detail["id"].values.reshape(-1, 1)],
+                                             axis=1)
         self.cla_by_did = self.reg_detail.groupby("did")
         self.cla_by_pid = self.reg_detail.groupby("pid")
         self.patients.get_job_id_list(self.cla_by_pid)
+        self.patients.get_multi_reg_edge()
+        self.patients.edge = np.array(self.patients.edge).T
+        self.patients.edge[0, :] += self.reg_num
         self.doctor.get_job_id_list(self.cla_by_did)
+        self.doctor.get_edge()
+        self.doctor.edge = np.array(self.doctor.edge).T
+        self.doctor.edge[0, :] += self.reg_num + len(self.patients.multi_reg_pid)
         self.p_sc_jobs = self.patients.reg_job_id_list.copy()
         self.d_sc_jobs = self.doctor.reg_job_id_list.copy()
         self.hole_total_time = 0
-        self.edge_idle = np.zeros((self.reg_num, self.reg_num))
-        self.edge_connect = np.zeros((self.reg_num, self.reg_num), dtype=bool)
-        self.init_edge_connect(self.patients.reg_job_id_list)
-        self.init_edge_connect(self.doctor.reg_job_id_list)
         self.edge = self.get_edge()
-
-    def init_edge_connect(self, all_reg_job_list):
-        for job_id_list in all_reg_job_list:
-            for job_id_start in job_id_list:
-                for job_id_end in job_id_list:
-                    if job_id_start != job_id_end:
-                        self.edge_connect[job_id_start, job_id_end] = True
+        self.d_tasks = [[] for _ in range(self.doctor.player_num)]
+        self.p_tasks = [[] for _ in range(self.patients.player_num)]
+        self.tasks = []
 
     def step(self, action, step):
         reward = 0.
@@ -127,6 +129,8 @@ class Environment:
             insert_data.append(step)
             insert_data.append(action)
             doc.insert_patient(insert_data, d_action)
+            self.d_tasks[d_action].append([insert_data[1], insert_data[3]])
+            self.p_tasks[p_action].append([insert_data[1], insert_data[3]])
             self.patients.reg_num_list[p_action] -= 1
             # self.done_node.append(action)
             # self.render_data.append([d_action, p_action, insert_data[1], insert_data[2], insert_data[3]])
@@ -152,10 +156,11 @@ class Environment:
                 total_idle_time_p = np.sum(self.patients.total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
 
-            reward = 1 - ((self.p_total_time + self.d_total_time) / (self.max_time * 2))
+            # reward = 1 - ((self.p_total_time + self.d_total_time) / (self.max_time * 2))
+            reward = - (self.p_total_time + self.d_total_time)
             # reward = 1 - (self.p_total_time / self.max_time)
             # reward = 1 - (self.p_total_time / self.max_time)
-            reward = max(0., reward)
+            # reward = max(0., reward)
 
             self.update_states(action, insert_data[1], p_action, d_action)
         if sum(self.patients.reg_num_list) == 0:
@@ -165,7 +170,11 @@ class Environment:
 
     def update_states(self, job_id, start_time, p_index, d_index):
         did = d_index
-        self.patients.state[job_id][1] = start_time / self.max_time
+        self.patients.state[job_id][1] = start_time
+        if p_index in self.patients.multi_reg_pid:
+            index = np.where(self.patients.multi_reg_pid == p_index)[0][0]
+            self.patients.multi_patient_state[index][0] -= 1
+        self.doctor.state[d_index][0] -= 1
         # self.patients.state[job_id][2] = finish / self.max_time * 2
         self.patients.action_mask[job_id] = False
         if did in self.patients.reg_list[p_index]:
@@ -180,14 +189,49 @@ class Environment:
         return total_time
 
     def get_edge(self):
-        # 获取第一个矩阵中值为True的元素的索引
-        true_indices = np.argwhere(self.edge_connect)
-        # 提取行列索引
-        rows, cols = true_indices[:, 0], true_indices[:, 1]
-        edge = true_indices.T.astype("int64")
-        edge_attr = self.edge_idle[rows, cols].astype("float32")
+        edge = []
+        d_edge = self.doctor.edge
+        p_edge = self.patients.edge
+        did = 0
+        for sc_d in self.doctor.schedule_list:
+            if len(sc_d) > 1:
+                sc_d = pd.DataFrame(np.array(sc_d),
+                                    columns=['pid', 'start_time',
+                                             'pro_time', 'finish_time',
+                                             "step", "job_id"]).sort_values("start_time").values
+                for row in range(len(sc_d)-1):
+                    edge.append([sc_d[row+1][5], sc_d[row][5]])
+            if len(sc_d) > 0:
+                sc_d = pd.DataFrame(np.array(sc_d),
+                                    columns=['pid', 'start_time',
+                                             'pro_time', 'finish_time',
+                                             "step", "job_id"]).sort_values("start_time").values
+                self.doctor.state[did][2] = sc_d[-1][3]
+            did += 1
 
-        return edge, edge_attr
+        for i in range(len(self.patients.multi_reg_pid)):
+            pid = self.patients.multi_reg_pid[i]
+            sc_p = self.patients.schedule_info[pid]
+            if len(sc_p) > 1:
+                sc_p = pd.DataFrame(np.array(sc_p),
+                                    columns=["did", "start_time", "finish_time",
+                                             "job_id"]).sort_values("start_time").values
+                for row in range(len(sc_p)-1):
+                    edge.append([sc_p[row+1][3], sc_p[row][3]])
+            if len(sc_p) > 0:
+                sc_p = pd.DataFrame(np.array(sc_p),
+                                    columns=["did", "start_time", "finish_time",
+                                             "job_id"]).sort_values("start_time").values
+                assert sc_p[-1][2] - sc_p[0][1] > 0
+                self.patients.multi_patient_state[2] = sc_p[-1][2] - sc_p[0][1]
+
+        if edge:
+            edge = np.array(edge).T
+            edge = np.concatenate([edge, p_edge, d_edge], axis=1)
+        else:
+            edge = np.concatenate([p_edge, d_edge], axis=1)
+
+        return edge
 
     def cal_hole(self, did):
         doc = self.doctor
@@ -223,19 +267,12 @@ class Environment:
     def find_position(self, pid, did, job_id):
         doc = self.doctor
         # 当前医生的排班列表位置
-        patient = self.patients
+        # d_free_pos = int(doc.free_pos[did])
+        # patient = self.patients
         # 处理时间
         pro_time = self.reg_detail.values[job_id][2]
 
-        p_reg_list = self.p_sc_jobs[pid]
-        d_reg_list = self.d_sc_jobs[did]
-        p_reg_list.remove(job_id)
-        d_reg_list.remove(job_id)
-
-        self.edge_connect[:, job_id] = False
-        self.edge_connect[job_id, :] = False
-        self.edge_connect[job_id, d_reg_list] = True
-        self.edge_connect[job_id, p_reg_list] = True
+        self.tasks = []
         # 该医生的排班列表
         schedule_list = doc.schedule_list[int(did)]
         # 排班列表的最后结束时间
@@ -243,45 +280,45 @@ class Environment:
         if schedule_list:
             schedule_list = np.array(schedule_list)
             last_time = schedule_list[:, 3].max()
-            scheduled_job = schedule_list[:, 5]
-
-            self.edge_connect[scheduled_job, :][:, d_reg_list] = False
-
-            self.edge_connect[np.repeat(job_id, len(scheduled_job)), scheduled_job] = False
-            last_job = np.where(schedule_list[:, 3] == schedule_list[:, 3].max())[0][0]
-            self.edge_connect[last_job, job_id] = True
+            self.tasks.extend(self.d_tasks[did])
 
         # 该病人的排班情况
         last_schedule_list = self.patients.last_schedule
 
-        finish_time = 0
-
         # 如果该病人被分配过
         if last_schedule_list[0][pid] != 0:
-            # 获取该病人以排班情况的列表
-            sch_info = patient.schedule_info[pid]
-            sch_info = np.array(sch_info)
-            scheduled_job = sch_info[:, 3]
-            self.edge_connect[scheduled_job, :][:, d_reg_list] = False
-            last_job_id = np.where(sch_info[:, 2] == sch_info[:, 2].max())[0][0]
-            self.edge_connect[last_job_id, job_id] = True
-
-            finish_time = sch_info[:, 2].max()
-            if last_time > finish_time:
-                last_job = np.where(sch_info[:, 2] == sch_info[:, 2].max())[0][0]
-                self.edge_idle[int(last_job)][job_id] = ((last_time-finish_time)/self.max_time)
-            elif last_time < finish_time:
-                # if isinstance(schedule_list, list):
-                #     schedule_list = np.array(schedule_list)
-                if last_time == 0:
-                    pass
-                else:
-                    last_job = np.where(schedule_list[:, 3] == schedule_list[:, 3].max())[0][0]
-                    self.edge_idle[int(last_job)][job_id] = ((finish_time - last_time)/self.max_time)
-        start_time = max(last_time, finish_time)
-        insert_data = [pid, start_time, pro_time, start_time + pro_time]
-
+            self.tasks.extend(self.p_tasks[pid])
+        holes = self.find_idle_times(pro_time)
+        if holes:
+            insert_data = [pid, holes[0][0], pro_time, holes[0][0] + pro_time]
+        else:
+            if last_time <= last_schedule_list[1][pid]:
+                insert_data = [pid, last_schedule_list[1][pid], pro_time, last_schedule_list[1][pid] + pro_time]
+            else:
+                insert_data = [pid, last_time, pro_time, last_time + pro_time]
         return insert_data
+
+    def find_idle_times(self, pro_time):
+        # 如果任务列表为空，返回空闲时间列表 []
+        if not self.tasks:
+            return []
+
+        # 转换为 NumPy 数组并按开始时间排序
+        tasks = np.array(self.tasks)
+        tasks = tasks[np.argsort(tasks[:, 0])]
+
+        idle_times = []
+        prev_end_time = tasks[0, 1]
+        for i in range(1, len(tasks)):
+            curr_start_time, curr_end_time = tasks[i]
+            if curr_start_time > prev_end_time and curr_start_time - prev_end_time >= pro_time:
+                # 如果当前任务的开始时间在上一个任务结束时间之后，并且它们之间的空闲时间大于 Pro_time
+                idle_times.append([prev_end_time, curr_start_time])
+            prev_end_time = max(prev_end_time, curr_end_time)
+        if tasks[0, 0] >= pro_time:
+            # 如果第一个任务的开始时间大于等于 Pro_time，那么将时间轴从 0 开始
+            idle_times.insert(0, [0, tasks[0, 0]])
+        return idle_times
 
 
 if __name__ == '__main__':

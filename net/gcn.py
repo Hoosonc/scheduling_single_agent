@@ -23,26 +23,28 @@ class GCN(torch.nn.Module):
         super(GCN, self).__init__()
         # torch.manual_seed(2022)
         self.reg_num = reg_num
-        self.conv1 = GATConv(in_channels=3, out_channels=2, heads=2)
+        self.conv1 = GATConv(in_channels=12, out_channels=6, heads=2)
         # self.conv1 = GCNConv(4, 2)
         # self.conv1 = GIN(2, 4, num_layers=2)
-        self.conv2 = GATConv(in_channels=4, out_channels=1, heads=2)
+        self.conv2 = GATConv(in_channels=12, out_channels=3, heads=2)
         # self.conv2 = GCNConv(2, 2)
         # self.conv2 = GIN(4, 4, num_layers=2)
-        self.conv3 = GATConv(in_channels=2, out_channels=1, heads=1)
+        self.conv3 = GATConv(in_channels=6, out_channels=1, heads=1)
         # self.conv3 = GCNConv(2, 1)
         # self.conv3 = GIN(4, 1, num_layers=2)
         self.L1 = nn.Sequential(
-            Linear(reg_num, reg_num*2),
+            Linear(97, reg_num*2),
             Linear(reg_num*2, reg_num)
         )
         self.critic = nn.Sequential(
-            Linear(reg_num, reg_num),
+            Linear(97, reg_num),
             Linear(reg_num, 1)
         )
+        self.embedding_process = nn.Linear(4, 12)
+        self.embedding_p = nn.Linear(3, 12)
+        self.embedding_d = nn.Linear(3, 12)
         self.state_list = []
         self.edge_list = []
-        self.edge_attr_list = []
         self.action_list = []
         self.value_list = []
         self.log_prob_list = []
@@ -55,14 +57,22 @@ class GCN(torch.nn.Module):
         #     self.critic.weight.data, 1)
         # self.critic.bias.data.fill_(0)
 
-    def forward(self, data, edge_index, edge_attr):
-        x = self.conv1(data, edge_index, edge_attr)
-        x = torch.relu(x)
+    def forward(self, process_state=None, multi_reg_state=None, d_state=None, edge_index=None, data=None):
+        if data != None:
+            data = data
+        else:
+            embedding_process = self.embedding_process(process_state)
+            embedding_p = self.embedding_p(multi_reg_state)
+            embedding_d = self.embedding_d(d_state)
+            data = torch.cat([embedding_process, embedding_p, embedding_d], dim=0).to(device)
+
+        x = self.conv1(data, edge_index)
+        x = f.elu(x)
         x = f.dropout(x, training=True)
-        x = self.conv2(x, edge_index, edge_attr)
-        x = torch.relu(x)
+        x = self.conv2(x, edge_index)
+        x = f.elu(x)
         x = f.dropout(x, training=True)
-        x = self.conv3(x, edge_index, edge_attr)
+        x = self.conv3(x, edge_index)
         x = x.view(1, -1)
         # x = self.hx
         value = self.critic(x)
@@ -74,19 +84,18 @@ class GCN(torch.nn.Module):
         # action = torch.argmax(policy_head.probs)
         action = torch.multinomial(policy_head.probs, num_samples=1)
 
-        return policy_head, value, action
+        return policy_head, value, action, data
 
-    def choose_action(self, data, edge, edge_attr):
+    def choose_action(self, process_state, multi_reg_state, d_state, edge):
 
-        data = torch.tensor(data, dtype=torch.float32).to(device)
+        process_state = torch.tensor(process_state, dtype=torch.float32).to(device)
+        multi_reg_state = torch.tensor(multi_reg_state, dtype=torch.float32).to(device)
+        d_state = torch.tensor(d_state, dtype=torch.float32).to(device)
         edge_index = torch.tensor(edge).to(device)
-        edge_attr = torch.tensor(edge_attr).to(device)
 
-        policy_head, value, action = self.forward(data, edge_index, edge_attr)
-
+        policy_head, value, action, data = self.forward(process_state, multi_reg_state, d_state, edge_index)
         self.state_list.append(data)
         self.edge_list.append(edge_index)
-        self.edge_attr_list.append(edge_attr)
         self.action_list.append(action)
         self.value_list.append(value)
         self.log_prob_list.append(policy_head.log_prob(action))
@@ -101,7 +110,7 @@ class GCN(torch.nn.Module):
         self.value_list = []
         self.log_prob_list = []
 
-    def get_batch_p_v(self, state_batch, batch_edges, batch_edge_attrs, p_action_batch):
+    def get_batch_p_v(self, state_batch, batch_edges, p_action_batch):
         log_prob_list = []
         value_list = []
         entropy = []
@@ -110,7 +119,7 @@ class GCN(torch.nn.Module):
             v_ = []
             entropy_ = []
             for i in range(len(state_batch[epoch])):
-                p, v, _ = self.forward(state_batch[epoch][i], batch_edges[epoch][i], batch_edge_attrs[epoch][i])
+                p, v, _, _ = self.forward(data=state_batch[epoch][i], edge_index=batch_edges[epoch][i])
                 v_.append(v)
                 log_prob_.append(p.log_prob(torch.tensor([p_action_batch[epoch][i]]).to(device)))
                 entropy_.append(p.entropy())

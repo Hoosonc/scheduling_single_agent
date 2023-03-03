@@ -18,14 +18,13 @@ class PPOClip:
         self.entropy = None
 
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr_v)
-        self.scheduler = StepLR(self.optimizer, step_size=100, gamma=0.88)
+        self.scheduler = StepLR(self.optimizer, step_size=900, gamma=0.88)
 
-    def learn(self, state_batch, batch_edges, batch_edge_attrs, action_batch, return_batch,
+    def learn(self, state_batch, batch_edges, action_batch, return_batch,
               old_value_batch, old_log_prob_batch, adv_batch):
         # lr = self.learning_rate
 
-        value_batch, log_prob_batch, entropy = self.net.get_batch_p_v(state_batch, batch_edges,
-                                                                      batch_edge_attrs, action_batch)
+        value_batch, log_prob_batch, entropy = self.net.get_batch_p_v(state_batch, batch_edges, action_batch)
 
         # todo: not mentioned in paper, but used in openai baselines
         # self.value_loss_clip(value_batch, return_batch, old_value_batch)

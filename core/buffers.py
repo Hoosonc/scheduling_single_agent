@@ -14,9 +14,8 @@ class Buffer:
         self.terminal_list = []
         self.value_list = []
         self.log_prob_list = []
-        self.edge_attr_list = []
 
-    def add_data(self, state_t=None, edge_t=None, edge_attr_t=None, action_t=None, reward_t=None,
+    def add_data(self, state_t=None, edge_t=None, action_t=None, reward_t=None,
                  terminal_t=None, value_t=None, log_prob_t=None):
         if state_t and action_t and reward_t and terminal_t \
                 and value_t and log_prob_t:
@@ -28,7 +27,6 @@ class Buffer:
             self.value_list.extend(value_t)
             self.log_prob_list.extend(log_prob_t)
             self.edge_list.extend(edge_t)
-            self.edge_attr_list.extend(edge_attr_t)
 
 
 class BatchBuffer:
@@ -40,25 +38,23 @@ class BatchBuffer:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.states = None
         self.edges = None
-        self.edge_attrs = None
         self.actions = None
         self.returns = None
         self.values = None
         self.log_prob = None
         self.adv = None
 
-    def add_batch_data(self, states_t=None, edge_t=None, edge_attr_t=None, actions_t=None,
+    def add_batch_data(self, states_t=None, edge_t=None, actions_t=None,
                        rewards_t=None, terminals_t=None, values_t=None, log_prob_t=None, buffer_index=0):
         assert len(states_t) == len(actions_t) == len(rewards_t) == len(terminals_t) \
                == (len(values_t)-1) == len(log_prob_t)
 
-        self.buffer_list[buffer_index].add_data(states_t, edge_t, edge_attr_t, actions_t, rewards_t,
+        self.buffer_list[buffer_index].add_data(states_t, edge_t, actions_t, rewards_t,
                                                 terminals_t, values_t, log_prob_t)
 
     def buffer_list_to_array(self):
         states = []
         edges = []
-        edge_attrs = []
         actions = []
         rewards = []
         terminals = []
@@ -71,7 +67,6 @@ class BatchBuffer:
         for buffer in self.buffer_list:
             states.append(buffer.state_list[: min_len])
             edges.append(buffer.edge_list[: min_len])
-            edge_attrs.append(buffer.edge_attr_list[: min_len])
             actions.append(buffer.action_list[: min_len])
             rewards.append(buffer.reward_list[: min_len])
             terminals.append(buffer.terminal_list[: min_len])
@@ -94,7 +89,7 @@ class BatchBuffer:
         # p_log_prob = np.array(p_log_prob)
         # d_log_prob = np.array(d_log_prob)
 
-        return states, edges, edge_attrs, actions, rewards, terminals, values, log_prob
+        return states, edges, actions, rewards, terminals, values, log_prob
 
     def compute_reward_to_go_returns(self, rewards, values, terminals):
         """
@@ -148,7 +143,7 @@ class BatchBuffer:
         return advantages
 
     def get_data(self):
-        states, edges, edge_attrs, actions, rewards, terminals, values, log_prob = self.buffer_list_to_array()
+        states, edges, actions, rewards, terminals, values, log_prob = self.buffer_list_to_array()
         # rew_mean = torch.cat(
         #     [torch.full((1, rewards.shape[1]), m.item()) for m in torch.mean(rewards, dim=1)]).to(self.device)
         # rew_std = torch.cat(
@@ -163,14 +158,13 @@ class BatchBuffer:
 
         returns = self.compute_reward_to_go_returns(rewards, values, terminals)
 
-        self.states, self.edges, self.edge_attrs, self.actions, self.returns, self.values, \
-            self.log_prob, self.adv = states, edges, edge_attrs, actions, returns, values, log_prob, adv
+        self.states, self.edges, self.actions, self.returns, self.values, \
+            self.log_prob, self.adv = states, edges, actions, returns, values, log_prob, adv
 
     def get_mini_batch(self, batch_size):
         select_index = np.random.choice(a=len(self.states), size=batch_size, replace=False, p=None)
         batch_states = []
         batch_edges = []
-        batch_edge_attrs = []
         batch_actions = []
         batch_returns = self.returns[select_index]
         batch_values = self.values[select_index]
@@ -190,7 +184,6 @@ class BatchBuffer:
         for index in select_index:
             batch_states.append(self.states[index])
             batch_edges.append(self.edges[index])
-            batch_edge_attrs.append(self.edge_attrs[index])
             batch_actions.append(self.actions[index])
 
         select_index = select_index.tolist()
@@ -198,8 +191,7 @@ class BatchBuffer:
         for index in select_index:
             del self.states[index]
             del self.edges[index]
-            del self.edge_attrs[index]
             del self.actions[index]
 
-        return batch_states, batch_edges, batch_edge_attrs, batch_actions, batch_returns, \
+        return batch_states, batch_edges, batch_actions, batch_returns, \
             batch_values, batch_log_prob, batch_adv

@@ -36,6 +36,7 @@ class Player:
         self.idle_time_a = None
         self.idle_time_p = None
         self.reg_job_id_list = None
+        self.edge = []
 
     def reset_(self):
         self.total_idle_time = np.zeros((self.player_num,))  # 总间隔时间

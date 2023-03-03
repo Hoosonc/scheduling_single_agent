@@ -15,10 +15,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Doctor(Player):
-    def __init__(self, doc_file, args):
+    def __init__(self, file, args):
         super(Doctor, self).__init__()
         self.args = args
-        self.file = doc_file
+        self.file = file
         self.reg_num = list()  # 不变  挂号数量
         self.reg_num_list = None  # 变
         self.schedule_list = None
@@ -30,14 +30,19 @@ class Doctor(Player):
         all_doc = self.file.sort_values('did', ascending=True).groupby('did')
         self.reg_job_id_list = [[] for _ in range(self.player_num)]
         self.max_time_op = 0
+        self.state = np.zeros((self.player_num, 3))
+        self.state[:, 1] = np.arange(self.player_num)
         for doc in all_doc:
             doc_info = doc[1]
-            self.reg_num.append(doc_info['reg_num'].values[0])
+            reg_num = doc_info.count()[0]
+            self.reg_num.append(reg_num)
 
     def reset(self):
         self.schedule_list = [[] for _ in range(self.player_num)]
         self.total_idle_time = np.zeros((self.player_num,))
         self.free_pos = np.zeros((self.player_num,))
+        self.state[:, 0] = self.reg_num
+        self.state[:, 2] = np.zeros((self.player_num,))
         self.reg_num_list = np.array(self.reg_num.copy()).reshape((self.player_num,))
         self.reset_()
 
@@ -50,3 +55,9 @@ class Doctor(Player):
 
         self.schedule_list[d_index].append(insert_data)
         self.free_pos[d_index] += 1
+
+    def get_edge(self):
+        self.edge = []
+        for i in range(self.player_num):
+            for job in self.reg_job_id_list[i]:
+                self.edge.append([i, job])
