@@ -58,9 +58,9 @@ class Patient(Player):
         self.mask_matrix = np.zeros((self.d_num, self.player_num), dtype=bool)
         self.total_idle_time = np.zeros((self.player_num,))
         self.multi_reg_pid = np.where(self.reg_num > 1)[0]
-        self.multi_patient_state = np.zeros((len(self.multi_reg_pid), 3))
+        self.multi_patient_state = np.zeros((len(self.multi_reg_pid), 1))
         self.multi_patient_state[:, 0] = self.reg_num[self.multi_reg_pid]
-        self.multi_patient_state[:, 1] = self.multi_reg_pid
+        # self.multi_patient_state[:, 1] = self.multi_reg_pid
         self.reg_num_list = np.array(self.reg_num.tolist()).reshape((self.player_num,))
         self.last_schedule = np.zeros((2, self.player_num))  # 上一个号的结束时间
         """

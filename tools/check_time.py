@@ -23,6 +23,5 @@ def check_time(path):
 
 
 if __name__ == '__main__':
-    for i in range(10):
-        d, p = check_time(f"../data/save_data/or_tool_{i}.csv")
-        print(d, p, d+p)
+    d, p = check_time(f"../data/save_data/other_rules/spt_twkr.csv")
+    print(d, p, d+p)

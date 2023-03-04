@@ -140,9 +140,11 @@ class Environment:
             # reward += hole_total_time
             # self.hole_total_time = hole_total_time
 
-            # reward += (hole_total_time - self.doctor.total_idle_time[d_action])
+            reward += (hole_total_time - self.doctor.total_idle_time[d_action])
 
             self.doctor.total_idle_time[d_action] = hole_total_time
+            self.doctor.state[d_action][1] = (self.doctor.total_idle_time[d_action] /
+                                              (self.max_time/self.doctor.player_num))
             self.patients.schedule_info[p_action].append([d_action, insert_data[1],
                                                           insert_data[3], insert_data[5]])
 
@@ -157,10 +159,10 @@ class Environment:
                 self.total_idle_time_p = total_idle_time_p
 
             # reward = 1 - ((self.p_total_time + self.d_total_time) / (self.max_time * 2))
-            reward = - (self.p_total_time + self.d_total_time)
-            # reward = 1 - (self.p_total_time / self.max_time)
-            # reward = 1 - (self.p_total_time / self.max_time)
-            # reward = max(0., reward)
+            # reward = - (self.p_total_time + self.d_total_time)
+            reward = 1 - (reward / (self.max_time/self.doctor.player_num))
+
+            reward = max(0., reward)
 
             self.update_states(action, insert_data[1], p_action, d_action)
         if sum(self.patients.reg_num_list) == 0:
@@ -201,12 +203,12 @@ class Environment:
                                              "step", "job_id"]).sort_values("start_time").values
                 for row in range(len(sc_d)-1):
                     edge.append([sc_d[row+1][5], sc_d[row][5]])
-            if len(sc_d) > 0:
-                sc_d = pd.DataFrame(np.array(sc_d),
-                                    columns=['pid', 'start_time',
-                                             'pro_time', 'finish_time',
-                                             "step", "job_id"]).sort_values("start_time").values
-                self.doctor.state[did][2] = sc_d[-1][3]
+            # if len(sc_d) > 0:
+            #     sc_d = pd.DataFrame(np.array(sc_d),
+            #                         columns=['pid', 'start_time',
+            #                                  'pro_time', 'finish_time',
+            #                                  "step", "job_id"]).sort_values("start_time").values
+                # self.doctor.state[did][1] = sc_d[-1][3]
             did += 1
 
         for i in range(len(self.patients.multi_reg_pid)):
@@ -218,12 +220,12 @@ class Environment:
                                              "job_id"]).sort_values("start_time").values
                 for row in range(len(sc_p)-1):
                     edge.append([sc_p[row+1][3], sc_p[row][3]])
-            if len(sc_p) > 0:
-                sc_p = pd.DataFrame(np.array(sc_p),
-                                    columns=["did", "start_time", "finish_time",
-                                             "job_id"]).sort_values("start_time").values
-                assert sc_p[-1][2] - sc_p[0][1] > 0
-                self.patients.multi_patient_state[2] = sc_p[-1][2] - sc_p[0][1]
+            # if len(sc_p) > 0:
+            #     sc_p = pd.DataFrame(np.array(sc_p),
+            #                         columns=["did", "start_time", "finish_time",
+            #                                  "job_id"]).sort_values("start_time").values
+            #     assert sc_p[-1][2] - sc_p[0][1] > 0
+            #     self.patients.multi_patient_state[2] = sc_p[-1][2] - sc_p[0][1]
 
         if edge:
             edge = np.array(edge).T

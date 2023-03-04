@@ -1,5 +1,5 @@
 import torch
-from torch.optim.lr_scheduler import StepLR
+# from torch.optim.lr_scheduler import StepLR
 
 
 class PPOClip:
@@ -18,7 +18,7 @@ class PPOClip:
         self.entropy = None
 
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr_v)
-        self.scheduler = StepLR(self.optimizer, step_size=900, gamma=0.88)
+        # self.scheduler = StepLR(self.optimizer, step_size=400, gamma=0.88)
 
     def learn(self, state_batch, batch_edges, action_batch, return_batch,
               old_value_batch, old_log_prob_batch, adv_batch):
@@ -41,7 +41,7 @@ class PPOClip:
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.net.parameters(), self.max_grad_norm)
         self.optimizer.step()
-        self.scheduler.step()
+        # self.scheduler.step()
         return loss
         # return self.v_loss_no_clip, self.pi_loss, self.entropy
 

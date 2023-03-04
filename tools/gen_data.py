@@ -3,6 +3,7 @@
 # @Author : hxc
 # @File : gen_data.py
 # @Software : PyCharm
+import math
 import random
 
 import numpy as np
@@ -106,7 +107,8 @@ def distance_d(doc_num, file_name):
     dis_arr.to_csv(f"../data/{file_name}.csv", index=False, header=None)
 
 
-def gen_data(file_name, p_num, d_num, multi):
+def gen_data(p_num, d_num):
+    multi = int(p_num*0.15)
     data_list = []
     p_st = np.ones((1, p_num), dtype="int64")
     multi_reg = np.random.choice(a=p_num, p=None, size=multi, replace=False)
@@ -116,7 +118,9 @@ def gen_data(file_name, p_num, d_num, multi):
     d_a = [_ for _ in range(d_num)]
     job_num = 0
     legal_mask = np.ones((d_num, p_num), dtype=bool)
-    while job_num < 78:
+    max_job_num = (len(multi_reg) * 3) + (p_num - len(multi_reg))
+    max_job_num = max_job_num - random.randint(0, multi)
+    while job_num < max_job_num:
         pid = np.random.choice(a=p_a, p=None, size=1)[0]
         did = np.random.choice(a=d_a, p=None, size=1)[0]
         if legal_mask[did][pid]:
@@ -126,17 +130,17 @@ def gen_data(file_name, p_num, d_num, multi):
             d_st[0][did] += 1
             if p_st[0][pid] == 0:
                 p_a.remove(pid)
-            if d_st[0][did] == 8:
+            if d_st[0][did] == math.ceil(max_job_num/d_num):
                 d_a.remove(did)
             job_num += 1
             legal_mask[did][pid] = False
     data = pd.DataFrame(data=data_list, columns=["pid", "did", "pro_time"], index=None)
-    data.to_csv(f"../data/{file_name}.csv", index=False)
+    data.to_csv(f"../data/{d_num}_{p_num}_{max_job_num}.csv", index=False)
 
 
 if __name__ == '__main__':
     # distance_d(10, "distance")
-    gen_data("reg_data_1", 60, 10, 9)
+    gen_data(280, 20)
     # doctors = gen_doctors()
     # doc_header = ['did', 'reg_num', 'start_time', 'avg_pro_time']
     # save_data(doc_header, doctors, "doc_am")
