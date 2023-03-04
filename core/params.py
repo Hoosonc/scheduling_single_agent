@@ -35,7 +35,7 @@ class Params:
                                  help='maximum length of an episode (default: 1)')
         self.parser.add_argument('--batch_num', type=int, default=1,
                                  help='')
-        self.parser.add_argument('--update_num', type=int, default=5,
+        self.parser.add_argument('--update_num', type=int, default=3,
                                  help='')
         self.parser.add_argument('--episode', type=int, default=12000,
                                  help='How many episode to train the RL algorithm')

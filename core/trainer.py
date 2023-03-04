@@ -42,7 +42,7 @@ class Trainer:
         self.total_time = 0
         self.min_idle_time = 999999
         self.min_total_time = 1726
-        self.min_p_idle = 10
+        self.min_d_idle = 10
         self.scheduled_data = []
         self.file_name = ""
         self.reward_list = []
@@ -116,20 +116,20 @@ class Trainer:
                     self.idle_total.append([d_idle, p_idle, total_idle_time,
                                             self.env.d_total_time, self.env.p_total_time, total_time, episode])
 
-                    if p_idle < self.min_p_idle:
-                        self.min_p_idle = p_idle
+                    if d_idle < self.min_d_idle:
+                        self.min_d_idle = d_idle
                         self.scheduled_data = []
                         for did in range(self.doctor.player_num):
                             sc = self.env.doctor.schedule_list[did]
                             for i in range(int(self.doctor.free_pos[did])):
                                 item = [int(did), sc[i][0], sc[i][1], sc[i][2], sc[i][3], sc[i][4]]
                                 self.scheduled_data.append(item)
-                        self.file_name = f"{int(p_idle)}_{int(self.env.p_total_time)}_{int(total_time)}"
+                        self.file_name = f"{int(d_idle)}_{int(self.env.d_total_time)}"
                         self.save_data(self.file_name)
 
                     self.batch_buffer.get_data()
                     loss = 0.
-                    mini_batch = (self.env.reg_num // 2)
+                    mini_batch = int(self.env.reg_num*0.6)
                     for _ in range(0, self.args.update_num):
                         # self.env.reset()
                         batch_states, batch_edges, batch_actions, batch_returns, \
