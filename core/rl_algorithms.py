@@ -39,7 +39,7 @@ class PPOClip:
 
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.net.parameters(), self.max_grad_norm)
+        # torch.nn.utils.clip_grad_norm_(self.net.parameters(), self.max_grad_norm)
         self.optimizer.step()
         # self.scheduler.step()
         return loss

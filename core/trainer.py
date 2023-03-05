@@ -33,7 +33,6 @@ class Trainer:
         node_num = self.env.reg_num + len(self.patient.multi_reg_pid) + self.doctor.player_num
         self.model = GCN(self.env.reg_num, self.patient, self.doctor, node_num).to(device)
 
-        # self.load_params()
         self.ppo = PPOClip(self.model, device, args)
 
         self.batch_buffer = BatchBuffer(buffer_num=1, gamma=args.gamma, lam=args.gae_lambda)
@@ -55,6 +54,8 @@ class Trainer:
         self.action_list = []
         self.value_list = []
         self.log_prob_list = []
+        self.model_name = f"{self.doctor.player_num}_{self.patient.player_num}_{self.env.reg_num}"
+        # self.load_params(self.model_name)
 
     def train(self):
         env = self.env
@@ -112,7 +113,7 @@ class Trainer:
                     d_idle = np.sum(self.doctor.total_idle_time)
                     total_idle_time = p_idle + d_idle
 
-                    total_time = self.env.d_total_time+self.env.p_total_time
+                    total_time = self.env.d_total_time + self.env.p_total_time
                     self.idle_total.append([d_idle, p_idle, total_idle_time,
                                             self.env.d_total_time, self.env.p_total_time, total_time, episode])
 
@@ -129,11 +130,11 @@ class Trainer:
 
                     self.batch_buffer.get_data()
                     loss = 0.
-                    mini_batch = int(self.env.reg_num*0.6)
+                    mini_batch = int(self.env.reg_num * 0.6)
                     for _ in range(0, self.args.update_num):
                         # self.env.reset()
                         batch_states, batch_edges, batch_actions, batch_returns, \
-                            batch_values, batch_log_prob, batch_adv = \
+                        batch_values, batch_log_prob, batch_adv = \
                             self.batch_buffer.get_mini_batch(mini_batch)
                         loss = self.ppo.learn(batch_states, batch_edges, batch_actions,
                                               batch_returns, batch_values, batch_log_prob, batch_adv)
@@ -148,10 +149,11 @@ class Trainer:
                     # print("总时间：", self.env.get_total_time())
                     if episode % 120 == 0:
                         self.episode = episode
-                        self.save_model()
-                        self.save_info(self.r_l, f"r_l", ['reward', 'loss', 'ep'], "r_l")
-                        self.save_info(self.idle_total, f"i_t", ['d_idle', 'p_idle', 'idle',
-                                                                 'total_d', 'total_p', 'total', 'ep'], "i_t")
+                        self.save_model(self.model_name)
+                        self.save_info(self.r_l, f"r_l_{self.model_name}",
+                                       ['reward', 'loss', 'ep'], "r_l")
+                        self.save_info(self.idle_total, f"i_t_{self.model_name}",
+                                       ['d_idle', 'p_idle', 'idle', 'total_d', 'total_p', 'total', 'ep'], "i_t")
                         self.r_l = []
                         self.idle_total = []
 
@@ -163,13 +165,13 @@ class Trainer:
 
                     break
 
-    def save_model(self):
+    def save_model(self, file_name):
         # torch.save(self.model.actor.state_dict(), f'./net/params/actor.pth')
         # torch.save(self.model.critic.state_dict(), f'./net/params/critic.pth')
-        torch.save(self.model.state_dict(), f'./net/params/10_60_78.pth')
+        torch.save(self.model.state_dict(), f'./net/params/{file_name}.pth')
 
-    def load_params(self):
-        self.model.load_state_dict(torch.load("./net/params/10_60_78.pth"))
+    def load_params(self, model_name):
+        self.model.load_state_dict(torch.load(f"./net/params/{model_name}.pth"))
 
     def save_data(self, file_name):
         with open(f'./data/save_data/{file_name}.csv', mode='w+', encoding='utf-8-sig', newline='') as f:

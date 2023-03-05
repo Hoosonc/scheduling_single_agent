@@ -23,8 +23,8 @@ def save_data(data_list, i):
         csv_w.writerows(all_data)
 
 
-def get_data():
-    reg = pd.read_csv("../data/reg_data_1.csv")
+def get_data(path):
+    reg = pd.read_csv(path)
     p_num = reg.groupby("pid").count().shape[0]
     data_list = [[] for _ in range(p_num)]
     for p in reg.values:
@@ -35,7 +35,7 @@ def get_data():
     return data_list
 
 
-def main(i):
+def main(i, path):
     """Minimal jobshop problem."""
     # Data.
     # jobs_data = [  # task = (machine_id, processing_time).
@@ -43,7 +43,7 @@ def main(i):
     #     [(0, 2), (2, 1), (1, 4)],  # Job1
     #     [(1, 4), (2, 3)]  # Job2
     # ]
-    jobs_data = get_data()
+    jobs_data = get_data(path)
 
     machines_count = 1 + max(task[0] for job in jobs_data for task in job)
     all_machines = range(machines_count)
@@ -125,5 +125,5 @@ def main(i):
 
 
 if __name__ == '__main__':
-    for i in range(10):
-        main(i)
+    for i in range(1):
+        main(i, "../data/10_80_99.csv")

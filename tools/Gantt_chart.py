@@ -36,7 +36,7 @@ def gantt(path, p_num, d_num):
         plt.text(int(float(data[i][2])) + a + (int(float(data[i][3])) / 2),
                  int(data[i][0]),
                  int(float(data[i][1])),
-                 fontsize=100,
+                 fontsize=80,
                  verticalalignment="center",
                  horizontalalignment="center"
                  )
@@ -50,4 +50,4 @@ def gantt(path, p_num, d_num):
 
 
 if __name__ == '__main__':
-    gantt("../data/save_data/1338_764_2102_2.csv", 60, 10)
+    gantt("../data/save_data/other_rules/10_60_78/0_1181.csv", 60, 10)

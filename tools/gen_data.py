@@ -112,14 +112,16 @@ def gen_data(p_num, d_num):
     data_list = []
     p_st = np.ones((1, p_num), dtype="int64")
     multi_reg = np.random.choice(a=p_num, p=None, size=multi, replace=False)
+    multi_reg_2 = np.random.choice(a=len(multi_reg), p=None, size=random.randint(0, multi), replace=False)
     p_st[0][multi_reg] = 3
+    p_st[0][multi_reg[multi_reg_2]] = 2
     d_st = np.zeros((1, d_num), dtype="int64")
     p_a = [_ for _ in range(p_num)]
     d_a = [_ for _ in range(d_num)]
     job_num = 0
     legal_mask = np.ones((d_num, p_num), dtype=bool)
-    max_job_num = (len(multi_reg) * 3) + (p_num - len(multi_reg))
-    max_job_num = max_job_num - random.randint(0, multi)
+    max_job_num = np.sum(p_st[0])
+    # max_job_num = max_job_num - random.randint(0, multi)
     while job_num < max_job_num:
         pid = np.random.choice(a=p_a, p=None, size=1)[0]
         did = np.random.choice(a=d_a, p=None, size=1)[0]
@@ -140,7 +142,7 @@ def gen_data(p_num, d_num):
 
 if __name__ == '__main__':
     # distance_d(10, "distance")
-    gen_data(280, 20)
+    gen_data(140, 15)
     # doctors = gen_doctors()
     # doc_header = ['did', 'reg_num', 'start_time', 'avg_pro_time']
     # save_data(doc_header, doctors, "doc_am")

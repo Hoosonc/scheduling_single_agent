@@ -11,7 +11,7 @@ if __name__ == '__main__':
     print("The multi_agent RL program of Patient treatment sequence scheduling starts training...")
     trainer = Trainer(args)
     trainer.train()
-    trainer.save_model()
+    trainer.save_model(trainer.model_name)
     # trainer.save_reward_loss("r_l")
     # trainer.save_data("result")
     print("training end!")

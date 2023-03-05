@@ -42,6 +42,7 @@ class Doctor(Player):
         self.total_idle_time = np.zeros((self.player_num,))
         self.free_pos = np.zeros((self.player_num,))
         self.state[:, 0] = self.reg_num
+        self.state[:, 0] = self.state[:, 0] / self.state[:, 0]
         self.state[:, 1] = np.zeros((self.player_num,))
         self.reg_num_list = np.array(self.reg_num.copy()).reshape((self.player_num,))
         self.reset_()
