@@ -14,6 +14,7 @@ import torch
 # import torch.optim as opt
 import csv
 from net.gcn import GCN
+from torch.optim.lr_scheduler import StepLR
 # from net.cnn import CNN
 # from net.gcn_new import GCN
 # from net.utils import get_now_date as hxc
@@ -56,6 +57,7 @@ class Trainer:
         self.log_prob_list = []
         self.model_name = f"{self.doctor.player_num}_{self.patient.player_num}_{self.env.reg_num}"
         # self.load_params(self.model_name)
+        self.scheduler = StepLR(self.ppo.optimizer, step_size=600, gamma=0.5)
 
     def train(self):
         env = self.env
@@ -134,16 +136,18 @@ class Trainer:
                     for _ in range(0, self.args.update_num):
                         # self.env.reset()
                         batch_states, batch_edges, batch_actions, batch_returns, \
-                        batch_values, batch_log_prob, batch_adv = \
+                            batch_values, batch_log_prob, batch_adv = \
                             self.batch_buffer.get_mini_batch(mini_batch)
                         loss = self.ppo.learn(batch_states, batch_edges, batch_actions,
                                               batch_returns, batch_values, batch_log_prob, batch_adv)
                         # print("return:", torch.sum(batch_returns))
+
                     if episode % 30 == 0:
                         print("loss:", loss.item())
                     self.r_l.append([sum(self.reward_list), loss.item(), episode])
                     self.batch_buffer.__init__(buffer_num=self.args.batch_num,
                                                gamma=self.args.gamma, lam=self.args.gae_lambda)
+                    self.scheduler.step()
                     update_episode = 0
                     # print("episode:", episode)
                     # print("总时间：", self.env.get_total_time())

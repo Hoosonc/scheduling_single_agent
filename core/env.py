@@ -194,38 +194,25 @@ class Environment:
         edge = []
         d_edge = self.doctor.edge
         p_edge = self.patients.edge
-        did = 0
         for sc_d in self.doctor.schedule_list:
+            # ['pid', 'start_time', 'pro_time', 'finish_time', "step", "job_id"]
             if len(sc_d) > 1:
-                sc_d = pd.DataFrame(np.array(sc_d),
-                                    columns=['pid', 'start_time',
-                                             'pro_time', 'finish_time',
-                                             "step", "job_id"]).sort_values("start_time").values
-                for row in range(len(sc_d)-1):
-                    edge.append([sc_d[row+1][5], sc_d[row][5]])
-            # if len(sc_d) > 0:
-            #     sc_d = pd.DataFrame(np.array(sc_d),
-            #                         columns=['pid', 'start_time',
-            #                                  'pro_time', 'finish_time',
-            #                                  "step", "job_id"]).sort_values("start_time").values
-                # self.doctor.state[did][1] = sc_d[-1][3]
-            did += 1
+                sc_d = np.matrix(sc_d).astype("int64")
+                idx = sc_d[:, 1].argsort(axis=0).reshape(1, -1)  # 按照start_time的值排序
+                sc_d = sc_d[idx, :][0]
+                e = np.column_stack((sc_d[:-1, 5], sc_d[1:, 5])).tolist()  # 把原始矩阵的job_id列和它的下一行组合起来
+                edge.extend(e)
 
         for i in range(len(self.patients.multi_reg_pid)):
             pid = self.patients.multi_reg_pid[i]
             sc_p = self.patients.schedule_info[pid]
             if len(sc_p) > 1:
-                sc_p = pd.DataFrame(np.array(sc_p),
-                                    columns=["did", "start_time", "finish_time",
-                                             "job_id"]).sort_values("start_time").values
-                for row in range(len(sc_p)-1):
-                    edge.append([sc_p[row+1][3], sc_p[row][3]])
-            # if len(sc_p) > 0:
-            #     sc_p = pd.DataFrame(np.array(sc_p),
-            #                         columns=["did", "start_time", "finish_time",
-            #                                  "job_id"]).sort_values("start_time").values
-            #     assert sc_p[-1][2] - sc_p[0][1] > 0
-            #     self.patients.multi_patient_state[2] = sc_p[-1][2] - sc_p[0][1]
+                # ["did", "start_time", "finish_time", "job_id"]
+                sc_p = np.matrix(sc_p).astype("int64")
+                idx = sc_p[:, 1].argsort(axis=0).reshape(1, -1)  # 按照start_time的值排序
+                sc_p = sc_p[idx, :][0]
+                e = np.column_stack((sc_p[:-1, 3], sc_p[1:, 3])).tolist()  # 把原始矩阵的job_id列和它的下一行组合起来
+                edge.extend(e)
 
         if edge:
             edge = np.array(edge).T
@@ -238,31 +225,25 @@ class Environment:
     def cal_hole(self, did):
         doc = self.doctor
         hole_total_time = 0
-        sc = pd.DataFrame(np.array(doc.schedule_list[int(did)]),
-                          columns=['pid', 'start_time',
-                                   'pro_time', 'finish_time',
-                                   "step", "job_id"]).sort_values("start_time").values
-        for index in range(int(doc.free_pos[did])):
-            start_time = sc[index][1]
-            if index == 0:
-                hole_total_time += start_time
-            else:
-                last_time = sc[index - 1][3]
-                assert (start_time - last_time) >= 0
-                hole_total_time += (start_time - last_time)
-        assert hole_total_time >= 0
+        # ['pid', 'start_time', 'pro_time', 'finish_time', "step", "job_id"]
+        sc = np.array(doc.schedule_list[int(did)])
+        if len(sc) >= 1:
+            idx = sc[:, 1].argsort(axis=0).reshape(1, -1)  # 按照start_time的值排序
+            sc = sc[idx, :][0]
+            hole_total_time += sc[0][1]
+            hole_total_time += (sc[1:, 1] - sc[0:-1, 3]).sum()
         return hole_total_time
 
     def cal_p_idle(self, sc, pid):
         total_idle_time = 0.
         patients = self.patients
-        sc = pd.DataFrame(np.array(sc), columns=["did", "start_time", "finish_time",
-                                                 "job_id"]).sort_values("start_time").values
+        # ["did", "start_time", "finish_time", "job_id"]
+        sc = np.array(sc)
+        idx = sc[:, 1].argsort(axis=0).reshape(1, -1)  # 按照start_time的值排序
+        sc = sc[idx, :][0]
         last_schedule_list = patients.last_schedule
+        total_idle_time += (sc[1:, 1] - sc[0:-1, 2]).sum()
 
-        for i in range(len(sc) - 1):
-            total_idle_time += sc[i + 1][1] - sc[i][2]
-            assert (sc[i + 1][1] - sc[i][2]) >= 0
         last_schedule_list[1][pid] = sc[len(sc) - 1][2]
         return total_idle_time
 
@@ -311,15 +292,20 @@ class Environment:
 
         idle_times = []
         prev_end_time = tasks[0, 1]
+
+        if tasks[0, 0] >= pro_time:
+            # 如果第一个任务的开始时间大于等于 Pro_time，那么将时间轴从 0 开始
+            idle_times.insert(0, [0, tasks[0, 0]])
+            return idle_times
+
         for i in range(1, len(tasks)):
             curr_start_time, curr_end_time = tasks[i]
             if curr_start_time > prev_end_time and curr_start_time - prev_end_time >= pro_time:
                 # 如果当前任务的开始时间在上一个任务结束时间之后，并且它们之间的空闲时间大于 Pro_time
                 idle_times.append([prev_end_time, curr_start_time])
+                return idle_times
             prev_end_time = max(prev_end_time, curr_end_time)
-        if tasks[0, 0] >= pro_time:
-            # 如果第一个任务的开始时间大于等于 Pro_time，那么将时间轴从 0 开始
-            idle_times.insert(0, [0, tasks[0, 0]])
+
         return idle_times
 
 

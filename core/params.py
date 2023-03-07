@@ -13,7 +13,7 @@ class Params:
         self.args = self.parser.parse_args()
 
     def get_parser(self):
-        self.parser.add_argument('--lr_v', type=float, default=0.00002,
+        self.parser.add_argument('--lr_v', type=float, default=0.001,
                                  help='learning rate (default: 0.0001)')
         self.parser.add_argument('--epsilon', type=float, default=0.25,
                                  help='epsilon (default: 0.3)')
@@ -37,9 +37,9 @@ class Params:
                                  help='')
         self.parser.add_argument('--update_num', type=int, default=3,
                                  help='')
-        self.parser.add_argument('--episode', type=int, default=4800,
+        self.parser.add_argument('--episode', type=int, default=4920,
                                  help='How many episode to train the RL algorithm')
-        self.parser.add_argument('--reg-path', type=str, default='./data/10_100_128.csv',
+        self.parser.add_argument('--reg-path', type=str, default='./data/20_220_267.csv',
                                  help='The path of Reg file')
         self.parser.add_argument('--doc-path', type=str, default='./data/doc.csv',
                                  help='The path of doc file')

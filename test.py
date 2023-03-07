@@ -33,16 +33,13 @@ def com_idle_time():
 def transition_time():
     a = np.zeros((10, 10))
     for i in range(9):
-        for j in range(i+1, 10):
+        for j in range(i + 1, 10):
             a[i][j] = random.randint(2, 5)
             a[j][i] = a[i][j]
     return a
 
 
 if __name__ == '__main__':
-    tasks = np.array([[0, 2, 3],
-                      [4, 5, 6],
-                      [7, 8, 9]])
-    a = []
-    b = np.array([0, 2])
-    print(0.88**10)
+    a = [[0, 10], [4, 11], [13, 15], [17, 20]]
+
+    print(a)  # 输出结果
