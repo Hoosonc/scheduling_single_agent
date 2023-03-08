@@ -33,13 +33,11 @@ class Params:
                                  help='number of forward steps in A2C (default: 300)')
         self.parser.add_argument('--max-steps', type=int, default=78,
                                  help='maximum length of an episode (default: 1)')
-        self.parser.add_argument('--batch_num', type=int, default=4,
+        self.parser.add_argument('--update_num', type=int, default=3,
                                  help='')
-        self.parser.add_argument('--update_num', type=int, default=5,
+        self.parser.add_argument('--env_num', type=int, default=9,
                                  help='')
-        self.parser.add_argument('--env_num', type=int, default=5,
-                                 help='')
-        self.parser.add_argument('--mini_batch', type=int, default=1,
+        self.parser.add_argument('--mini_batch', type=int, default=3,
                                  help='')
         self.parser.add_argument('--episode', type=int, default=6000,
                                  help='How many episode to train the RL algorithm')

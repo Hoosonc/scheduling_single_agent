@@ -14,7 +14,7 @@ import torch
 # import torch.optim as opt
 import csv
 from net.gcn import GCN
-from multiprocessing import Queue
+# from multiprocessing import Queue
 from threading import Thread
 from torch.optim.lr_scheduler import StepLR
 # from net.cnn import CNN
@@ -48,7 +48,7 @@ class Trainer:
         self.total_time = 0
         self.min_idle_time = 999999
         self.min_total_time = 1800
-        self.min_d_idle = 5
+        self.min_d_idle = 1
         self.scheduled_data = []
         self.file_name = ""
         self.reward_list = []
@@ -105,7 +105,7 @@ class Trainer:
                     for did in range(self.doctor.player_num):
                         sc = env.doctor.schedule_list[did]
                         scheduled_data.extend(sc)
-                    self.file_name = f"{int(env.d_total_time)}_{int(env.p_total_time)}_{int(total_time)}"
+                    self.file_name = f"{int(d_idle)}_{int(env.d_total_time)}"
                     self.save_data(self.file_name)
                 env.reset()
 
@@ -114,8 +114,8 @@ class Trainer:
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())
             if episode % 30 == 0:
-                print(loss)
-                print(np.mean(self.sum_reward))
+                print("loss:", loss)
+                print("mean_reward:", np.mean(self.sum_reward))
             if episode % 120 == 0:
                 self.episode = episode
                 self.save_model(self.model_name)

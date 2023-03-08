@@ -184,11 +184,10 @@ class Environment:
                 total_idle_time_p = np.sum(self.patients.total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
 
-            # reward = 1 - ((self.p_total_time + self.d_total_time) / (self.max_time * 2))
-            # reward = - (self.p_total_time + self.d_total_time)
-            reward = 1 - (reward / self.max_time)
+            # reward = 1 - (reward / self.max_time)
+            reward = - reward
             # reward = 1 - ((sum(self.doctor.total_idle_time) + sum(self.patients.total_idle_time)) / self.max_time)
-            reward = max(0., reward)
+            # reward = max(0., reward)
 
             self.update_states(action, insert_data[1], p_action, d_action)
         if sum(self.patients.reg_num_list) == 0:
@@ -199,7 +198,7 @@ class Environment:
 
     def update_states(self, job_id, start_time, p_index, d_index):
         self.edge_attr[job_id][0] = True
-        self.edge_attr[job_id][1] = start_time / self.max_time
+        self.edge_attr[job_id][1] = start_time
 
         self.doctor.state[d_index][0] -= 1
 
@@ -220,7 +219,7 @@ class Environment:
         reg_data = self.reg_detail.values
         for i in range(reg_data.shape[0]):
             edge.append([reg_data[i][0], reg_data[i][1]])
-            self.edge_attr[i][2] = reg_data[i][2] / self.max_time
+            self.edge_attr[i][2] = reg_data[i][2]
             self.edge_attr[i][3] = reg_data[i][3]
         self.edge = np.array(edge, dtype="int64").T
 

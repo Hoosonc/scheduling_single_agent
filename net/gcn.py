@@ -6,7 +6,9 @@
 # import numpy as np
 import torch
 import torch.nn as nn
+from threading import Thread
 from torch.nn import Linear
+from multiprocessing import Queue
 # from torch_geometric.nn import GIN
 from torch_geometric.nn import GATConv
 # from torch_geometric.nn import GCNConv
@@ -75,30 +77,28 @@ class GCN(torch.nn.Module):
 
     def choose_action(self, data, edge, edge_attr, env):
 
-        # edge_index = torch.tensor(edge).to(device)
-
         policy_head, value, action = self.forward(data, edge, edge_attr, env)
-
-        # self.state_list.append(data)
-        # self.edge_list.append(edge_index)
-        # self.action_list.append(action)
-        # self.value_list.append(value)
-        # self.log_prob_list.append(policy_head.log_prob(action))
 
         return action.item(), value, policy_head.log_prob(action)
 
     def get_batch_p_v(self, buffer_list):
+        data_list_obj = [new_policy_data() for _ in range(len(buffer_list))]
         log_prob_list = [[] for _ in range(len(buffer_list))]
         value_list = [[] for _ in range(len(buffer_list))]
         entropy = [[] for _ in range(len(buffer_list))]
-        buf_n = 0
-        for buf in buffer_list:
-            for i in range(len(buf.state_list)):
-                p, v, _ = self.forward(buf.state_list[i], buf.edge_list[i], buf.edge_attr_list[i], buf)
-                value_list[buf_n].append(v)
-                log_prob_list[buf_n].append(p.log_prob(torch.tensor(buf.action_list[i]).to(device)))
-                entropy[buf_n].append(p.entropy())
-            buf_n += 1
+        t_list = []
+        for i in range(len(buffer_list)):
+            t = Thread(target=self.get_forward, args=(buffer_list[i], data_list_obj[i]))
+            t.start()
+            t_list.append(t)
+        for thread in t_list:
+            thread.join()
+
+        for i in range(len(data_list_obj)):
+            obj = data_list_obj[i]
+            value_list[i].extend(obj.value_list)
+            log_prob_list[i].extend(obj.log_prob_list)
+            entropy[i].extend(obj.entropy_list)
 
         values = torch.cat([torch.cat(value, dim=0).view(1, -1) for value in value_list],
                            dim=0).view(len(buffer_list), -1)
@@ -108,3 +108,17 @@ class GCN(torch.nn.Module):
                             dim=0).view(len(buffer_list), -1)
 
         return values, log_prob, entropy
+
+    def get_forward(self, buf, obj):
+        for i in range(len(buf.state_list)):
+            p, v, _ = self.forward(buf.state_list[i], buf.edge_list[i], buf.edge_attr_list[i], buf)
+            obj.value_list.append(v)
+            obj.log_prob_list.append(p.log_prob(torch.tensor(buf.action_list[i]).to(device)))
+            obj.entropy_list.append(p.entropy())
+
+
+class new_policy_data:
+    def __init__(self):
+        self.value_list = []
+        self.log_prob_list = []
+        self.entropy_list = []
