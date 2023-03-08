@@ -4,7 +4,7 @@
 # @File : test.py
 # @Software : PyCharm
 import random
-
+from sklearn.utils import shuffle
 import numpy as np
 import torch
 import torch.nn.functional as f
@@ -40,6 +40,7 @@ def transition_time():
 
 
 if __name__ == '__main__':
-    a = [[0, 10], [4, 11], [13, 15], [17, 20]]
-
-    print(a)  # 输出结果
+    x1 = np.zeros((5, 1))
+    x2 = np.ones((3, 1))
+    x = np.concatenate([x1, x2])
+    print(x.shape)

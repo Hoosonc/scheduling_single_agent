@@ -26,8 +26,8 @@ class Patient(Player):
         self.schedule_info = None
         self.d_num = d_num
         self.state = None
-        self.multi_patient_state = None
-        self.multi_reg_pid = None
+        # self.multi_patient_state = None
+        # self.multi_reg_pid = None
 
     def init_patient_info(self):
         self.player_num = self.file.groupby("pid").count().shape[0]
@@ -57,9 +57,9 @@ class Patient(Player):
         self.action_mask = np.ones((self.file.shape[0],), dtype=bool)
         self.mask_matrix = np.zeros((self.d_num, self.player_num), dtype=bool)
         self.total_idle_time = np.zeros((self.player_num,))
-        self.multi_reg_pid = np.where(self.reg_num > 1)[0]
-        self.multi_patient_state = np.zeros((len(self.multi_reg_pid), 1))
-        self.multi_patient_state[:, 0] = self.reg_num[self.multi_reg_pid]
+        # self.multi_reg_pid = np.where(self.reg_num > 1)[0]
+        # self.multi_patient_state = np.zeros((len(self.multi_reg_pid), 1))
+        # self.multi_patient_state[:, 0] = self.reg_num[self.multi_reg_pid]
         # self.multi_patient_state[:, 1] = self.multi_reg_pid
         self.reg_num_list = np.array(self.reg_num.tolist()).reshape((self.player_num,))
         self.last_schedule = np.zeros((2, self.player_num))  # 上一个号的结束时间
@@ -80,10 +80,10 @@ class Patient(Player):
 
         self.reset_()
 
-    def get_multi_reg_edge(self):
-        self.edge = []
-        i = 0
-        for pid in self.multi_reg_pid:
-            for job in self.reg_job_id_list[pid]:
-                self.edge.append([i, job])
-            i += 1
+    # def get_multi_reg_edge(self):
+    #     self.edge = []
+    #     i = 0
+    #     for pid in self.multi_reg_pid:
+    #         for job in self.reg_job_id_list[pid]:
+    #             self.edge.append([i, job])
+    #         i += 1
