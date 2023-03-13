@@ -20,24 +20,22 @@ class PPOClip:
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr_v)
         # self.scheduler = StepLR(self.optimizer, step_size=3000, gamma=0.5)
 
-    # def learn(self, state_batch, batch_edges, action_batch, return_batch,
-    #           old_value_batch, old_log_prob_batch, adv_batch):
-    def learn(self, buffer_list):
+    def learn(self, buffer):
 
-        value_batch, log_prob_batch, entropy = self.net.get_batch_p_v(buffer_list)
-        return_batch = torch.cat([buf.returns for buf in buffer_list], dim=0)
-        old_log_prob_batch = torch.cat([buf.log_prob for buf in buffer_list], dim=0)
-        adv_batch = torch.cat([buf.adv for buf in buffer_list], dim=0)
+        value_batch, log_prob_batch, entropy = self.net.get_batch_p_v(buffer)
+        return_batch = buffer.returns
+        old_log_prob_batch = buffer.log_prob_list
+        adv_batch = buffer.adv
+        old_value_batch = buffer.value_list
         # todo: not mentioned in paper, but used in openai baselines
-        # self.value_loss_clip(value_batch, return_batch, old_value_batch)
-        self.value_loss(value_batch, return_batch)
+        self.value_loss_clip(value_batch, return_batch, old_value_batch)
+        # self.value_loss(value_batch, return_batch)
 
         self.pi_loss = self.policy_loss(log_prob_batch, old_log_prob_batch, adv_batch)
-        # print('entropy :',policy_head.entropy())
+
         self.entropy = torch.mean(entropy)
 
-        loss = self.v_loss_no_clip * self.value_factor - self.pi_loss + self.entropy * self.entropy_factor
-        # loss = self.pi_loss - self.v_loss * self.value_factor + self.entropy * self.entropy_factor
+        loss = self.v_loss * self.value_factor - self.pi_loss + self.entropy * self.entropy_factor
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -49,36 +47,23 @@ class PPOClip:
 
     def value_loss(self, value_batch, return_batch):
         self.v_loss_no_clip = 0.5 * torch.mean((value_batch - return_batch) ** 2)
-        # value_loss = 0.5 * torch.mean((return_batch - value_batch) ** 2)
-        # self.v_loss_no_clip = value_loss
-        # others = {'r_square':r_square}
-        # others = None
-        # return value_loss
 
     def value_loss_clip(self, value_batch, return_batch, old_value_batch):  # value clip code level skill 1
-        old_value_batch = old_value_batch[:, :-1].detach()
+        old_value_batch = old_value_batch.detach()
         value_clipped = old_value_batch + torch.clamp(value_batch - old_value_batch, -self.clip_epsilon,
                                                       self.clip_epsilon)
         value_loss_1 = (value_batch - return_batch) ** 2
         value_loss_2 = (return_batch - value_clipped) ** 2
-        # print('value loss: ',value_loss_1.shape)
-        # print('max: ',torch.max(value_loss_1, value_loss_2).shape)
-        self.v_loss = .5 * torch.mean(torch.max(value_loss_1, value_loss_2))
 
-        # others = {'r_square':r_square}
-        # others = None
-        # return value_loss
+        self.v_loss = .5 * torch.mean(torch.max(value_loss_1, value_loss_2))
 
     def policy_loss(self, log_prob_batch, old_log_prob_batch, adv_batch):
         adv_batch = adv_batch.detach()
         ratio = torch.exp(log_prob_batch - old_log_prob_batch.detach())
-        # p_ratio_average = p_ratio.cpu().detach().numpy().mean()
 
-        # p_ratio_average = d_ratio.cpu().detach().numpy().mean()
-
-        ratio = ratio.view(-1, 1)  # take care the dimension here!!!
-
-        adv_batch = adv_batch.view(-1, 1)
+        # ratio = ratio.view(-1, 1)  # take care the dimension here!!!
+        #
+        # adv_batch = adv_batch.view(-1, 1)
         surrogate_1 = ratio * adv_batch
         surrogate_2 = torch.clamp(ratio, 1 - self.clip_epsilon, 1 + self.clip_epsilon) * adv_batch
         surrogate = torch.min(surrogate_1, surrogate_2)

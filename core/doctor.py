@@ -5,7 +5,7 @@
 # @Software : PyCharm
 import torch
 import numpy as np
-import pandas as pd
+# import pandas as pd
 # from net.controller import Cnn
 from core.player import Player
 # from net.controller import MLP
@@ -31,7 +31,7 @@ class Doctor(Player):
         self.reg_job_id_list = [[] for _ in range(self.player_num)]
         self.max_time_op = 0
         self.state = np.zeros((self.player_num, 2))
-        # self.state[:, 1] = np.arange(self.player_num)
+
         for doc in all_doc:
             doc_info = doc[1]
             reg_num = doc_info.count()[0]
@@ -41,9 +41,7 @@ class Doctor(Player):
         self.schedule_list = [[] for _ in range(self.player_num)]
         self.total_idle_time = np.zeros((self.player_num,))
         self.free_pos = np.zeros((self.player_num,))
-        self.state[:, 0] = self.reg_num
-        self.state[:, 0] = self.state[:, 0] / self.state[:, 0]
-        self.state[:, 1] = np.zeros((self.player_num,))
+        self.state = np.zeros((self.player_num, 2))
         self.reg_num_list = np.array(self.reg_num.copy()).reshape((self.player_num,))
         self.reset_()
 

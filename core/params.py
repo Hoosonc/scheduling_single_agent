@@ -13,7 +13,7 @@ class Params:
         self.args = self.parser.parse_args()
 
     def get_parser(self):
-        self.parser.add_argument('--lr_v', type=float, default=0.001,
+        self.parser.add_argument('--lr_v', type=float, default=0.005,
                                  help='learning rate (default: 0.0001)')
         self.parser.add_argument('--epsilon', type=float, default=0.25,
                                  help='epsilon (default: 0.3)')
@@ -35,9 +35,9 @@ class Params:
                                  help='maximum length of an episode (default: 1)')
         self.parser.add_argument('--update_num', type=int, default=3,
                                  help='')
-        self.parser.add_argument('--env_num', type=int, default=9,
+        self.parser.add_argument('--env_num', type=int, default=3,
                                  help='')
-        self.parser.add_argument('--mini_batch', type=int, default=3,
+        self.parser.add_argument('--mini_size', type=int, default=30,
                                  help='')
         self.parser.add_argument('--episode', type=int, default=6000,
                                  help='How many episode to train the RL algorithm')
