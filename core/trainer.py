@@ -41,7 +41,7 @@ class Trainer:
 
         self.ppo = PPOClip(self.model, device, args)
         self.total_time = 0
-        self.min_idle_time = 999999
+        self.min_idle_time = 122
         self.min_total_time = 1800
         self.min_d_idle = 1
         self.scheduled_data = []
@@ -72,17 +72,17 @@ class Trainer:
             for env in self.envs:
                 p_idle = np.sum(env.patients.total_idle_time)
                 d_idle = np.sum(env.doctor.total_idle_time)
-                total_idle_time = p_idle + d_idle
+                total_idle_time = int(p_idle + d_idle)
                 total_time = env.d_total_time + env.p_total_time
                 self.idle_total.append([d_idle, p_idle, total_idle_time,
                                         env.d_total_time, env.p_total_time, total_time, episode])
-                if d_idle < self.min_d_idle:
-                    self.min_d_idle = d_idle
-                    scheduled_data = []
+                if total_idle_time < self.min_idle_time:
+                    self.min_idle_time = total_idle_time
+                    self.scheduled_data = []
                     for did in range(self.doctor.player_num):
                         sc = env.doctor.schedule_list[did]
-                        scheduled_data.extend(sc)
-                    self.file_name = f"{int(d_idle)}_{int(env.d_total_time)}"
+                        self.scheduled_data.extend(sc)
+                    self.file_name = f"{int(d_idle)}_{int(p_idle)}_{total_idle_time}"
                     self.save_data(self.file_name)
                 env.reset()
 

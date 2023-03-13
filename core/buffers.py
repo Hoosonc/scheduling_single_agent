@@ -48,6 +48,7 @@ class Buffer:
         # (N,T) -> (T,N)   N:n_envs   T:trajectory_length
 
         rewards = torch.from_numpy(np.array(self.reward_list)).to(device).detach().view(1, -1)
+        rewards = f.normalize(rewards, p=2, dim=-1)
         values = torch.cat([value for value in self.value_list], dim=0).view(1, -1)
         log_prob = torch.cat([log_p for log_p in self.log_prob_list], dim=0).view(1, -1)
         self.log_prob = log_prob

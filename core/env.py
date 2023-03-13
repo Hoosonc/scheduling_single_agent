@@ -157,7 +157,7 @@ class Environment:
             # reward += hole_total_time
             # self.hole_total_time = hole_total_time
 
-            reward += (hole_total_time - self.doctor.total_idle_time[d_action])
+            # reward += (hole_total_time - self.doctor.total_idle_time[d_action])
 
             self.doctor.total_idle_time[d_action] = hole_total_time
             # self.doctor.state[d_action][1] = self.doctor.total_idle_time[d_action] /
@@ -171,15 +171,16 @@ class Environment:
                 patient_idle_time = self.cal_p_idle(
                     self.patients.schedule_info[p_action], p_action)
 
-                reward += (patient_idle_time - self.patients.total_idle_time[p_action])
+                # reward += (patient_idle_time - self.patients.total_idle_time[p_action])
                 self.patients.total_idle_time[p_action] = patient_idle_time
                 total_idle_time_p = np.sum(self.patients.total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
 
             # reward = 1 - (reward / (self.max_time/self.doctor.player_num))
-            reward = - reward
+            # reward = - reward
             # reward = 1 - ((sum(self.doctor.total_idle_time) + sum(self.patients.total_idle_time)) / self.max_time)
             # reward = max(0., reward)
+            reward = -(sum(self.doctor.total_idle_time) + sum(self.patients.total_idle_time))
 
             self.update_states(action, insert_data[1], p_action, d_action)
         if sum(self.patients.reg_num_list) == 0:
