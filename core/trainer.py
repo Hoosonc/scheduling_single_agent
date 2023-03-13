@@ -54,7 +54,7 @@ class Trainer:
         self.sum_reward = []
         self.model_name = f"{self.doctor.player_num}_{self.patient.player_num}_{self.reg_num}"
         # self.load_params(self.model_name)
-        self.scheduler = StepLR(self.ppo.optimizer, step_size=100, gamma=0.5)
+        self.scheduler = StepLR(self.ppo.optimizer, step_size=100, gamma=0.8)
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
 
     def train(self):
@@ -84,7 +84,7 @@ class Trainer:
                         scheduled_data.extend(sc)
                     self.file_name = f"{int(d_idle)}_{int(env.d_total_time)}"
                     self.save_data(self.file_name)
-                    env.reset()
+                env.reset()
 
             # update net
             self.buffer.get_data()
@@ -94,6 +94,7 @@ class Trainer:
 
                 buf = self.buffer.get_mini_batch(self.args.mini_size)
                 loss = self.ppo.learn(buf)
+            self.buffer.reset()
 
             self.r_l.append([np.mean(self.sum_reward), loss.item(), episode])
 
@@ -101,7 +102,7 @@ class Trainer:
 
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())
-            if episode % 1 == 0:
+            if episode % 30 == 0:
                 print("loss:", loss.item())
                 print("mean_reward:", np.mean(self.sum_reward))
             if episode % 120 == 0:

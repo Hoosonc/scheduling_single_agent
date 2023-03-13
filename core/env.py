@@ -9,6 +9,7 @@ import random
 from torch.distributions.categorical import Categorical
 import numpy as np
 import torch
+import torch.nn.functional as f
 import pandas as pd
 from sklearn.utils import shuffle
 from core.doctor import Doctor
@@ -170,7 +171,7 @@ class Environment:
                 patient_idle_time = self.cal_p_idle(
                     self.patients.schedule_info[p_action], p_action)
 
-                # reward += (patient_idle_time - self.patients.total_idle_time[p_action])
+                reward += (patient_idle_time - self.patients.total_idle_time[p_action])
                 self.patients.total_idle_time[p_action] = patient_idle_time
                 total_idle_time_p = np.sum(self.patients.total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
@@ -320,9 +321,13 @@ class Environment:
     def choose_action(self, data, edge, edge_attr, model):
 
         prob, value = model(data, edge, edge_attr)
+
         mask = torch.from_numpy(self.patients.action_mask).view(1, -1).to(device)
         prob[~mask] = 0
+        # prob[mask] = prob[mask] + 1
+        # prob = f.softmax(prob, dim=-1)  # 归一化
         prob = prob / prob.sum()
+
         policy_head = Categorical(probs=prob)
         action = policy_head.sample()
 

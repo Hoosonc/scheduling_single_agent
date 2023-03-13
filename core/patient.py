@@ -76,7 +76,7 @@ class Patient(Player):
         for i in range(len(self.reg_list)):
             for did in self.reg_list[i]:
                 self.mask_matrix[int(did)][i] = 1
-        self.state[:, :1] = self.action_mask.reshape(-1, 1)
+        # self.state[:, :1] = self.action_mask.reshape(-1, 1)
 
         self.reset_()
 

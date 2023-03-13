@@ -32,8 +32,8 @@ class Buffer:
         self.action_list.append(action_t)
         self.reward_list.append(reward_t)
         self.terminal_list.append(terminal_t)
-        self.value_list.append(value_t)
-        self.log_prob_list.append(log_prob_t)
+        self.value_list.append(value_t.detach())
+        self.log_prob_list.append(log_prob_t.detach())
 
     def compute_reward_to_go_returns_adv(self):
         """
@@ -96,6 +96,19 @@ class BatchBuffer:
         self.log_prob = None
         self.adv = None
 
+    def reset(self):
+        self.buffer_list = [Buffer(self.gamma, self.lam) for _ in range(self.buffer_num)]
+        self.mini_buffer = Buffer(self.gamma, self.lam)
+        self.states = None
+        self.edges = None
+        self.edges_attr = None
+        self.actions = None
+        self.returns = None
+        self.rewards = None
+        self.values = None
+        self.log_prob = None
+        self.adv = None
+
     def add_batch_data(self, states_t=None, edge_t=None, actions_t=None,
                        rewards_t=None, terminals_t=None, values_t=None, log_prob_t=None):
         assert len(states_t) == len(actions_t) == len(rewards_t) == len(terminals_t) \
@@ -132,8 +145,8 @@ class BatchBuffer:
         self.edges_attr = np.array(edge_attr_list)
         self.actions = np.array(action_list)
 
-        self.log_prob = torch.cat([log_prob for log_prob in log_prob_list], dim=0).view(1, -1)
-        self.values = torch.cat([value for value in value_list], dim=0).view(1, -1)
+        self.log_prob = torch.cat([log_prob.detach() for log_prob in log_prob_list], dim=0).view(1, -1)
+        self.values = torch.cat([value.detach() for value in value_list], dim=0).view(1, -1)
         # self.value_list = np.array(self.value_list)
         # self.log_prob_list = np.array(self.log_prob_list)
         self.rewards = np.array(reward_list)
