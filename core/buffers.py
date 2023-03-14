@@ -141,7 +141,8 @@ class BatchBuffer:
             adv_list.append(buf.adv)
 
         self.states = np.array(state_list)
-        self.edges = np.array(edge_list)
+        # self.edges = np.array(edge_list)
+        self.edges = edge_list
         # self.edges_attr = np.array(edge_attr_list)
         self.actions = np.array(action_list)
 
@@ -157,7 +158,9 @@ class BatchBuffer:
         buf = self.mini_buffer
         select_index = np.random.choice(a=len(self.states), size=mini_size, replace=False, p=None)
         buf.state_list = self.states[select_index]
-        buf.edge_list = self.edges[select_index]
+        # buf.edge_list = self.edges[select_index]
+        for index in select_index:
+            buf.edge_list.append(self.edges[index])
         # buf.edge_attr_list = self.edges_attr[select_index]
         buf.action_list = self.actions[select_index]
         buf.value_list = torch.index_select(self.values.view(1, -1), dim=1,

@@ -17,7 +17,7 @@ from net.gcn import GCN
 # from multiprocessing import Queue
 from threading import Thread
 # from multiprocessing import Process
-# from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import StepLR
 # from net.cnn import CNN
 # from net.gcn_new import GCN
 # from net.utils import get_now_date as hxc
@@ -55,7 +55,7 @@ class Trainer:
         self.sum_reward = []
         self.model_name = f"{self.doctor.player_num}_{self.patient.player_num}_{self.reg_num}"
         # self.load_params(self.model_name)
-        # self.scheduler = StepLR(self.ppo.optimizer, step_size=100, gamma=0.8)
+        self.scheduler = StepLR(self.ppo.optimizer, step_size=120, gamma=0.8)
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
 
     def train(self):
@@ -99,7 +99,7 @@ class Trainer:
 
             self.r_l.append([np.mean(self.sum_reward), loss.item(), episode])
 
-            # self.scheduler.step()
+            self.scheduler.step()
 
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())
