@@ -13,11 +13,11 @@ class Params:
         self.args = self.parser.parse_args()
 
     def get_parser(self):
-        self.parser.add_argument('--lr_v', type=float, default=0.001,
+        self.parser.add_argument('--lr_v', type=float, default=0.00005,
                                  help='learning rate (default: 0.0001)')
         self.parser.add_argument('--epsilon', type=float, default=0.25,
                                  help='epsilon (default: 0.3)')
-        self.parser.add_argument('--gamma', type=float, default=0.95,
+        self.parser.add_argument('--gamma', type=float, default=1,
                                  help='discount factor for rewards (default: 0.99)')
         self.parser.add_argument('--gae-lambda', type=float, default=1,
                                  help='lambda parameter for GAE (default: 1.00)')
@@ -37,7 +37,7 @@ class Params:
                                  help='')
         self.parser.add_argument('--env_num', type=int, default=3,
                                  help='')
-        self.parser.add_argument('--mini_size', type=int, default=40,
+        self.parser.add_argument('--mini_size', type=int, default=70,
                                  help='')
         self.parser.add_argument('--episode', type=int, default=6000,
                                  help='How many episode to train the RL algorithm')

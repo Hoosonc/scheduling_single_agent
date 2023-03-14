@@ -37,12 +37,14 @@ class Doctor(Player):
             reg_num = doc_info.count()[0]
             self.reg_num.append(reg_num)
 
-    def reset(self):
+    def reset(self, cla):
         self.schedule_list = [[] for _ in range(self.player_num)]
         self.total_idle_time = np.zeros((self.player_num,))
         self.free_pos = np.zeros((self.player_num,))
         self.state = np.zeros((self.player_num, 2))
         self.reg_num_list = np.array(self.reg_num.copy()).reshape((self.player_num,))
+        self.get_job_id_list(cla)
+        self.get_edge()
         self.reset_()
 
     def insert_patient(self, insert_data, d_index):
@@ -54,9 +56,3 @@ class Doctor(Player):
 
         self.schedule_list[d_index].append(insert_data)
         self.free_pos[d_index] += 1
-
-    def get_edge(self):
-        self.edge = []
-        for i in range(self.player_num):
-            for job in self.reg_job_id_list[i]:
-                self.edge.append([i, job])

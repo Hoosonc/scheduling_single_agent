@@ -9,7 +9,7 @@ import random
 from torch.distributions.categorical import Categorical
 import numpy as np
 import torch
-import torch.nn.functional as f
+# import torch.nn.functional as f
 import pandas as pd
 from sklearn.utils import shuffle
 from core.doctor import Doctor
@@ -34,10 +34,10 @@ class Environment:
         # self.p_nodes = np.zeros((self.patients.player_num, self.))
         # self.d_nodes = np.ones((self.doctor.player_num, 1))
         # self.nodes = np.concatenate([self.p_nodes, self.d_nodes])
-        self.nodes = np.zeros((self.patients.player_num + self.doctor.player_num, self.reg_num))
+        self.nodes = None
 
         # self.reg_nodes = np.zeros((self.reg_num, 4))
-
+        self.multi_reg_num = self.patients.reg_num[self.patients.reg_num > 1].sum()
         self.edge = None
         self.edge_attr = np.zeros((self.reg_num, 4))
         self.reg_detail = None
@@ -62,27 +62,25 @@ class Environment:
         self.d_tasks = None
         self.p_tasks = None
         self.tasks = None
-
         self.idle_total = []
 
     def reset(self):
         torch.manual_seed(random.randint(1000, 5000))
+        self.reg_detail = shuffle(self.reg_file)
+        self.reg_detail["id"] = np.arange(0, self.reg_detail.shape[0])
         self.d_total_time = 0
         self.p_total_time = 0
         self.p_s_f = np.zeros((2, self.patients.player_num))
-        self.doctor.reset()
-        self.patients.reset()
-        self.done = False
-        self.reg_detail = shuffle(self.reg_file)
-        self.reg_detail["id"] = np.arange(0, self.reg_detail.shape[0])
-
         self.cla_by_did = self.reg_detail.groupby("did")
         self.cla_by_pid = self.reg_detail.groupby("pid")
-        self.patients.get_job_id_list(self.cla_by_pid)
+        self.doctor.reset(self.cla_by_did)
+        self.patients.reset(self.cla_by_pid)
+        self.done = False
+        self.done_node = []
         # self.patients.get_multi_reg_edge()
         # self.patients.edge = np.array(self.patients.edge).T
         # self.patients.edge[0, :] += self.reg_num
-        self.doctor.get_job_id_list(self.cla_by_did)
+
         # self.doctor.get_edge()
         # self.doctor.edge = np.array(self.doctor.edge).T
         # self.doctor.edge[0, :] += self.reg_num + len(self.patients.multi_reg_pid)
@@ -96,8 +94,13 @@ class Environment:
         # self.reg_nodes[:, 0] = 1
         self.edge_attr = np.zeros((self.reg_num, 4), dtype="float32")
         self.edge_attr[:, 0] = 1
-        self.nodes = np.zeros((self.patients.player_num + self.doctor.player_num, self.reg_num))
-        self.get_edge()
+        self.nodes = np.zeros((self.reg_num, 7), dtype="float32")
+        self.nodes[:, 0] = True
+        self.nodes[:, 2] = self.reg_detail["pro_time"].values
+        self.nodes[:, 3] = self.reg_detail["id"].values
+        self.nodes[:, 4] = self.reg_detail["pid"].values
+        self.nodes[:, 5] = self.reg_detail["did"].values
+        # self.get_edge()
         self.d_tasks = [[] for _ in range(self.doctor.player_num)]
         self.p_tasks = [[] for _ in range(self.patients.player_num)]
         self.tasks = []
@@ -108,7 +111,6 @@ class Environment:
         p_action = self.reg_detail.values[action][0]
         d_action = self.reg_detail.values[action][1]
         if self.patients.mask_matrix[d_action][p_action]:
-
             doc = self.doctor
             last_schedule_list = self.patients.last_schedule
 
@@ -157,7 +159,7 @@ class Environment:
             # reward += hole_total_time
             # self.hole_total_time = hole_total_time
 
-            # reward += (hole_total_time - self.doctor.total_idle_time[d_action])
+            reward += (hole_total_time - self.doctor.total_idle_time[d_action])
 
             self.doctor.total_idle_time[d_action] = hole_total_time
             # self.doctor.state[d_action][1] = self.doctor.total_idle_time[d_action] /
@@ -176,11 +178,9 @@ class Environment:
                 total_idle_time_p = np.sum(self.patients.total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
 
-            # reward = 1 - (reward / (self.max_time/self.doctor.player_num))
-            # reward = - reward
-            # reward = 1 - ((sum(self.doctor.total_idle_time) + sum(self.patients.total_idle_time)) / self.max_time)
+            reward = 1 - (reward / (self.max_time/self.doctor.player_num))
+
             # reward = max(0., reward)
-            reward = -(sum(self.doctor.total_idle_time) + sum(self.patients.total_idle_time))
 
             self.update_states(action, insert_data[1], p_action, d_action)
         if sum(self.patients.reg_num_list) == 0:
@@ -189,16 +189,15 @@ class Environment:
         return self.done, reward
 
     def update_states(self, job_id, start_time, p_index, d_index):
-        self.edge_attr[job_id][0] = False
-        self.edge_attr[job_id][1] = start_time
-        self.nodes[p_index][job_id] = 0
-        self.nodes[p_index+d_index][job_id] = 0
-        # self.reg_nodes[job_id][0] = False
-        # self.reg_nodes[job_id][1] = start_time / (self.max_time/self.doctor.player_num)
+        self.done_node.append(job_id)
+        self.nodes[job_id][0] = False
+        self.nodes[job_id][1] = start_time
+        self.nodes[job_id][6] = start_time
+        self.update_edge(p_index, d_index)
 
-        if p_index in self.patients.multi_reg_pid:
-            index = np.where(self.patients.multi_reg_pid == p_index)[0][0]
-            self.patients.multi_patient_state[index][0] -= 1
+        # if p_index in self.patients.multi_reg_pid:
+        #     index = np.where(self.patients.multi_reg_pid == p_index)[0][0]
+        #     self.patients.multi_patient_state[index][0] -= 1
 
         self.patients.action_mask[job_id] = False
         if d_index in self.patients.reg_list[p_index]:
@@ -212,26 +211,55 @@ class Environment:
             total_time += self.doctor.schedule_list[i][int(self.doctor.free_pos[i] - 1)][3]
         return total_time
 
-    def get_edge(self):
+    def update_edge(self, pid, did):
+
+        self.patients.edge[pid] = self.get_edge(self.patients.reg_job_id_list[pid])
+        self.doctor.edge[did] = self.get_edge(self.doctor.reg_job_id_list[did])
+
+    def get_edge(self, reg_job_id_list):
         edge = []
-        # p_edge = np.array(self.patients.edge).T
-        # p_edge[0, :] += self.reg_num
-        # d_edge = np.array(self.doctor.edge).T
-        # d_edge[0, :] += self.reg_num + len(self.patients.multi_reg_pid)
-        # self.edge = np.concatenate([p_edge, d_edge], axis=1).astype("int64")
-        reg_data = self.reg_detail.values
-        for i in range(reg_data.shape[0]):
-            job_id = reg_data[i][3]
-            pid = reg_data[i][0]
-            did = reg_data[i][1]
-            pro_time = reg_data[i][2]
-            self.nodes[pid][job_id] = 1
-            self.nodes[pid+did][job_id] = 1
-            edge.append([reg_data[i][0], reg_data[i][1]])
-            self.edge_attr[i][2] = pro_time
-            self.edge_attr[i][3] = job_id
-        self.edge = np.array(edge, dtype="int64").T
-        self.edge[1] += self.patients.player_num
+        if len(reg_job_id_list) > 1:
+            for job_id in reg_job_id_list:
+                if self.nodes[job_id][0]:
+                    p_id = self.reg_detail.values[job_id][0]
+                    d_id = self.reg_detail.values[job_id][1]
+                    self.nodes[job_id][6] = self.find_position(p_id, d_id, job_id)[1]
+            reg_states = self.nodes[np.array(reg_job_id_list)]
+            reg_states = reg_states[reg_states[:, 6].argsort()]
+            tree = []
+            degree = 0
+            for i in range(reg_states.shape[0]):
+                if i == 0:
+                    tree.append([int(reg_states[i][3])])
+                else:
+                    if reg_states[i][1] > reg_states[i - 1][1]:
+                        degree += 1
+                        tree.append([int(reg_states[i][3])])
+                    else:
+                        tree[degree].append(int(reg_states[i][3]))
+            for d in range(len(tree)):
+                if len(tree[d]) > 1:
+                    for s in tree[d]:
+                        for end in tree[d]:
+                            if s != end and [s, end] not in edge:
+                                edge.append([s, end])
+                if d != 0:
+                    for s in tree[d - 1]:
+                        for end in tree[d]:
+                            assert s != end
+                            if s != end and [s, end] not in edge:
+                                edge.append([s, end])
+
+        return edge
+
+    def edge_input(self):
+        edge = []
+        for i in range(self.patients.player_num):
+            edge.extend(self.patients.edge[i])
+            if i < self.doctor.player_num:
+                edge.extend(self.doctor.edge[i])
+        edge = np.array(edge, dtype="int64").T
+        return edge
 
     def cal_hole(self, did):
         doc = self.doctor
@@ -319,9 +347,9 @@ class Environment:
 
         return idle_times
 
-    def choose_action(self, data, edge, edge_attr, model):
+    def choose_action(self, data, edge, model):
 
-        prob, value = model(data, edge, edge_attr)
+        prob, value = model(data, edge)
 
         mask = torch.from_numpy(self.patients.action_mask).view(1, -1).to(device)
         prob[~mask] = 0

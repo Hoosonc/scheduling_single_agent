@@ -23,12 +23,12 @@ class Buffer:
         self.lam = lam
         self.log_prob = None
 
-    def add_data(self, state_t=None, edge_t=None, edge_attr_t=None, action_t=None, reward_t=None,
+    def add_data(self, state_t=None, edge_t=None, action_t=None, reward_t=None,
                  terminal_t=None, value_t=None, log_prob_t=None):
 
         self.state_list.append(state_t)
         self.edge_list.append(edge_t)
-        self.edge_attr_list.append(edge_attr_t)
+        # self.edge_attr_list.append(edge_attr_t)
         self.action_list.append(action_t)
         self.reward_list.append(reward_t)
         self.terminal_list.append(terminal_t)
@@ -48,7 +48,6 @@ class Buffer:
         # (N,T) -> (T,N)   N:n_envs   T:trajectory_length
 
         rewards = torch.from_numpy(np.array(self.reward_list)).to(device).detach().view(1, -1)
-        rewards = f.normalize(rewards, p=2, dim=-1)
         values = torch.cat([value for value in self.value_list], dim=0).view(1, -1)
         log_prob = torch.cat([log_p for log_p in self.log_prob_list], dim=0).view(1, -1)
         self.log_prob = log_prob
@@ -143,7 +142,7 @@ class BatchBuffer:
 
         self.states = np.array(state_list)
         self.edges = np.array(edge_list)
-        self.edges_attr = np.array(edge_attr_list)
+        # self.edges_attr = np.array(edge_attr_list)
         self.actions = np.array(action_list)
 
         self.log_prob = torch.cat([log_prob.detach() for log_prob in log_prob_list], dim=0).view(1, -1)
@@ -159,7 +158,7 @@ class BatchBuffer:
         select_index = np.random.choice(a=len(self.states), size=mini_size, replace=False, p=None)
         buf.state_list = self.states[select_index]
         buf.edge_list = self.edges[select_index]
-        buf.edge_attr_list = self.edges_attr[select_index]
+        # buf.edge_attr_list = self.edges_attr[select_index]
         buf.action_list = self.actions[select_index]
         buf.value_list = torch.index_select(self.values.view(1, -1), dim=1,
                                             index=torch.tensor(select_index).to(device))

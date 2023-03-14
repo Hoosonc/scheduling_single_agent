@@ -41,16 +41,6 @@ def transition_time():
 
 
 if __name__ == '__main__':
-    x = torch.tensor([1, 2, 3, 4, 5])  # a tensor of shape [3, 4]
-    mask = torch.ones_like(x).bool()  # a boolean mask tensor of shape [3, 4]
-    mask[1] = False  # set the mask value at position (0,1) to False
-    # mask[3] = False  # set the mask value at position (2,3) to False
-    probs = torch.tensor(
-        [0.04, 0.80, 0.04, 0.04, 0.04])  # a tensor of shape [3 ,2], representing the probabilities for each row
-    probs[~mask] = 0
-    probs = probs / probs.sum()
-    dist = Categorical(probs)  # create a categorical distribution object with probs as parameter
-    for i in range(1000):
-        sampled_index = dist.sample().item()  # sample an index from the distribution for each row
-        if sampled_index == 1:
-            print(sampled_index)
+    x = np.array([[1, 2, 2], [2, 3, 4]])
+
+    print(x[:, :2])

@@ -25,21 +25,21 @@ class GCN(torch.nn.Module):
         # torch.manual_seed(2022)
         self.reg_num = reg_num
         # self.p_num, self.d_num = node_num
-        self.conv1 = GATConv(in_channels=reg_num, out_channels=round(reg_num/2), heads=4)
+        self.conv1 = GATConv(in_channels=6, out_channels=3, heads=4)
         # self.conv1 = GCNConv(4, 2)
         # self.conv1 = GIN(2, 4, num_layers=2)
-        self.conv2 = GATConv(in_channels=round(reg_num/2)*4, out_channels=round(reg_num/4), heads=4)
+        self.conv2 = GATConv(in_channels=12, out_channels=6, heads=4)
         # self.conv2 = GCNConv(2, 2)
         # self.conv2 = GIN(4, 4, num_layers=2)
-        self.conv3 = GATConv(in_channels=round(reg_num/4)*4, out_channels=round(reg_num/8), heads=4)
+        self.conv3 = GATConv(in_channels=24, out_channels=4, heads=4)
         # self.conv3 = GCNConv(2, 1)
         # self.conv3 = GIN(4, 1, num_layers=2)
         self.L1 = nn.Sequential(
-            Linear(node_num*round(reg_num/8)*4, reg_num),
+            Linear(reg_num*16, reg_num),
             Linear(reg_num, reg_num)
         )
         self.critic = nn.Sequential(
-            Linear(node_num*round(reg_num/8)*4, reg_num),
+            Linear(reg_num*16, reg_num),
             Linear(reg_num, 1)
         )
         # self.embedding_process = nn.Linear(4, 4)
@@ -52,15 +52,15 @@ class GCN(torch.nn.Module):
         #     self.critic.weight.data, 1)
         # self.critic.bias.data.fill_(0)
 
-    def forward(self, nodes, edge_index, edge_attr):
+    def forward(self, nodes, edge_index):
 
         nodes = torch.tensor(nodes, dtype=torch.float32).to(device)
 
         edge_index = torch.tensor(edge_index).to(device)
 
-        edge_attr = torch.tensor(edge_attr, dtype=torch.float32).to(device)
+        # edge_attr = torch.tensor(edge_attr, dtype=torch.float32).to(device)
 
-        x = self.conv1(nodes, edge_index, edge_attr)
+        x = self.conv1(nodes, edge_index)
         x = f.elu(x)
         x = f.dropout(x, training=True)
         x = self.conv2(x, edge_index)
@@ -78,7 +78,7 @@ class GCN(torch.nn.Module):
         value_list = []
         entropy = []
         for i in range(buf.state_list.shape[0]):
-            p, v = self.forward(buf.state_list[i], buf.edge_list[i], buf.edge_attr_list[i])
+            p, v = self.forward(buf.state_list[i], buf.edge_list[i])
             policy_head = Categorical(probs=p)
             value_list.append(v)
             log_prob_list.append(policy_head.log_prob(torch.tensor(buf.action_list[i]).to(device)))

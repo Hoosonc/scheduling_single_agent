@@ -54,3 +54,12 @@ class Player:
 
     def load_param(self):
         pass
+
+    def get_edge(self):
+        self.edge = [[] for _ in range(self.player_num)]
+        for i in range(self.player_num):
+            if len(self.reg_job_id_list[i]) > 1:
+                for s in self.reg_job_id_list[i]:
+                    for end in self.reg_job_id_list[i]:
+                        if s != end and [s, end] not in self.edge[i]:
+                            self.edge[i].append([s, end])

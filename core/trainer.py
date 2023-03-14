@@ -16,7 +16,8 @@ import csv
 from net.gcn import GCN
 # from multiprocessing import Queue
 from threading import Thread
-from torch.optim.lr_scheduler import StepLR
+# from multiprocessing import Process
+# from torch.optim.lr_scheduler import StepLR
 # from net.cnn import CNN
 # from net.gcn_new import GCN
 # from net.utils import get_now_date as hxc
@@ -41,7 +42,7 @@ class Trainer:
 
         self.ppo = PPOClip(self.model, device, args)
         self.total_time = 0
-        self.min_idle_time = 122
+        self.min_idle_time = 5
         self.min_total_time = 1800
         self.min_d_idle = 1
         self.scheduled_data = []
@@ -54,7 +55,7 @@ class Trainer:
         self.sum_reward = []
         self.model_name = f"{self.doctor.player_num}_{self.patient.player_num}_{self.reg_num}"
         # self.load_params(self.model_name)
-        self.scheduler = StepLR(self.ppo.optimizer, step_size=100, gamma=0.8)
+        # self.scheduler = StepLR(self.ppo.optimizer, step_size=100, gamma=0.8)
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
 
     def train(self):
@@ -76,13 +77,13 @@ class Trainer:
                 total_time = env.d_total_time + env.p_total_time
                 self.idle_total.append([d_idle, p_idle, total_idle_time,
                                         env.d_total_time, env.p_total_time, total_time, episode])
-                if total_idle_time < self.min_idle_time:
-                    self.min_idle_time = total_idle_time
+                if d_idle < self.min_idle_time:
+                    self.min_idle_time = d_idle
                     self.scheduled_data = []
                     for did in range(self.doctor.player_num):
                         sc = env.doctor.schedule_list[did]
                         self.scheduled_data.extend(sc)
-                    self.file_name = f"{int(d_idle)}_{int(p_idle)}_{total_idle_time}"
+                    self.file_name = f"{int(d_idle)}_{int(env.d_total_time)}"
                     self.save_data(self.file_name)
                 env.reset()
 
@@ -98,7 +99,7 @@ class Trainer:
 
             self.r_l.append([np.mean(self.sum_reward), loss.item(), episode])
 
-            self.scheduler.step()
+            # self.scheduler.step()
 
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())
@@ -119,14 +120,14 @@ class Trainer:
         buffer = self.buffer.buffer_list[i]
         for step in range(self.reg_num):
             # data = [env.reg_nodes, env.patients.multi_patient_state, env.doctor.state]
-            data = env.nodes
-            edge = env.edge
-            edge_attr = env.edge_attr
+            data = env.nodes[:, 0:6]
+            edge = env.edge_input()
+            # edge_attr = env.edge_attr
 
-            action, value, log_prob = env.choose_action(data, edge, edge_attr, self.model)
+            action, value, log_prob = env.choose_action(data, edge, self.model)
 
             done, reward = env.step(action, step)
-            self.buffer.buffer_list[i].add_data(data, edge, edge_attr, action, reward, done, value, log_prob)
+            self.buffer.buffer_list[i].add_data(data, edge, action, reward, done, value, log_prob)
         buffer.value_list.append(torch.tensor([0]).view(1, 1).to(device))
         buffer.compute_reward_to_go_returns_adv()
         self.sum_reward.append(sum(buffer.reward_list))

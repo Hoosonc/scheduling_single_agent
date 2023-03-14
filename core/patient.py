@@ -51,7 +51,7 @@ class Patient(Player):
         self.max_time_total = self.time_length.max(initial=0)
         # self.action_mask = np.ones((self.player_num,), dtype=bool)
 
-    def reset(self):
+    def reset(self, cla):
         self.schedule_info = [[] for _ in range(self.player_num)]
         self.state = np.zeros((self.file.shape[0], 2), dtype="float32")
         self.action_mask = np.ones((self.file.shape[0],), dtype=bool)
@@ -77,7 +77,8 @@ class Patient(Player):
             for did in self.reg_list[i]:
                 self.mask_matrix[int(did)][i] = 1
         # self.state[:, :1] = self.action_mask.reshape(-1, 1)
-
+        self.get_job_id_list(cla)
+        self.get_edge()
         self.reset_()
 
     def get_multi_reg_edge(self):
