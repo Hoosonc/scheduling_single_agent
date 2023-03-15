@@ -55,7 +55,7 @@ class Trainer:
         self.sum_reward = []
         self.model_name = f"{self.doctor.player_num}_{self.patient.player_num}_{self.reg_num}"
         # self.load_params(self.model_name)
-        self.scheduler = StepLR(self.ppo.optimizer, step_size=120, gamma=0.8)
+        self.scheduler = StepLR(self.ppo.optimizer, step_size=240, gamma=0.81)
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
 
     def train(self):

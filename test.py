@@ -41,6 +41,6 @@ def transition_time():
 
 
 if __name__ == '__main__':
-    x = np.array([[1, 2, 2], [2, 3, 4]])
-
-    print(x[:, :2])
+    x = 0.81 ** 24
+    b = 6000 / 240
+    print(x)
