@@ -128,7 +128,7 @@ class Trainer:
         buffer = self.buffer.buffer_list[i]
         for step in range(self.reg_num):
             # data = [env.reg_nodes, env.patients.multi_patient_state, env.doctor.state]
-            data = env.nodes[:, 0:6]
+            data = env.nodes[:, 0:5]
             edge = env.edge_input()
             # edge_attr = env.edge_attr
 

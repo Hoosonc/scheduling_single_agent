@@ -26,7 +26,7 @@ class GCN(torch.nn.Module):
         # torch.manual_seed(2022)
         self.reg_num = reg_num
         # self.p_num, self.d_num = node_num
-        self.conv1 = GATConv(in_channels=6, out_channels=3, heads=4)
+        self.conv1 = GATConv(in_channels=5, out_channels=3, heads=4)
         # self.conv1 = GCNConv(4, 2)
         # self.conv1 = GIN(2, 4, num_layers=2)
         self.conv2 = GATConv(in_channels=12, out_channels=6, heads=4)

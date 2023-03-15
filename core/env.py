@@ -80,12 +80,12 @@ class Environment:
         self.d_sc_jobs = self.doctor.reg_job_id_list.copy()
         self.hole_total_time = 0
 
-        self.nodes = np.zeros((self.reg_num, 7), dtype="float32")
+        self.nodes = np.zeros((self.reg_num, 6), dtype="float32")
         self.nodes[:, 0] = True
         self.nodes[:, 2] = self.reg_detail["pro_time"].values / (self.max_time/5)
         self.nodes[:, 3] = self.reg_detail["id"].values
-        self.nodes[:, 4] = self.reg_detail["pid"].values
-        self.nodes[:, 5] = self.reg_detail["did"].values
+        # self.nodes[:, 4] = self.reg_detail["pid"].values
+        self.nodes[:, 4] = self.reg_detail["did"].values
 
         self.d_tasks = [[] for _ in range(self.doctor.player_num)]
         self.p_tasks = [[] for _ in range(self.patients.player_num)]
@@ -178,7 +178,7 @@ class Environment:
         self.done_node.append(job_id)
         self.nodes[job_id][0] = False
         self.nodes[job_id][1] = start_time / (self.max_time/5)
-        self.nodes[job_id][6] = start_time
+        self.nodes[job_id][5] = start_time
         self.update_edge(p_index, d_index)
 
         # if p_index in self.patients.multi_reg_pid:
@@ -209,9 +209,9 @@ class Environment:
                 if self.nodes[job_id][0]:
                     p_id = self.reg_detail.values[job_id][0]
                     d_id = self.reg_detail.values[job_id][1]
-                    self.nodes[job_id][6] = self.find_position(p_id, d_id, job_id)[2]
+                    self.nodes[job_id][5] = self.find_position(p_id, d_id, job_id)[2]
             reg_states = self.nodes[np.array(reg_job_id_list)]
-            reg_states = reg_states[reg_states[:, 6].argsort()]
+            reg_states = reg_states[reg_states[:, 5].argsort()]
             tree = []
             degree = 0
             for i in range(reg_states.shape[0]):
