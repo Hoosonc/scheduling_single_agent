@@ -1,5 +1,5 @@
 import numpy as np
-
+from threading import Thread
 import torch.nn.functional as f
 # need to speed up, such as put them on numpy directly or on Tensor
 import torch
@@ -82,7 +82,7 @@ class BatchBuffer:
     def __init__(self, buffer_num, gamma, lam):
         self.buffer_num = buffer_num
         self.buffer_list = [Buffer(gamma, lam) for _ in range(self.buffer_num)]
-        self.mini_buffer = Buffer(gamma, lam)
+        # self.mini_buffer = None
         self.gamma = gamma
         self.lam = lam
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -98,7 +98,7 @@ class BatchBuffer:
 
     def reset(self):
         self.buffer_list = [Buffer(self.gamma, self.lam) for _ in range(self.buffer_num)]
-        self.mini_buffer = Buffer(self.gamma, self.lam)
+        # self.mini_buffer = None
         self.states = None
         self.edges = None
         self.edges_attr = None
@@ -154,8 +154,19 @@ class BatchBuffer:
         self.returns = torch.cat(return_list, dim=1)
         self.adv = torch.cat(adv_list, dim=1)
 
-    def get_mini_batch(self, mini_size):
-        buf = self.mini_buffer
+    def get_mini_batch(self, mini_size, update_num):
+        mini_buffer = [Buffer(self.gamma, self.lam) for _ in range(update_num)]
+        t_list = []
+        for i in range(update_num):
+            t = Thread(target=self.get_batch, args=(mini_buffer[i], mini_size))
+            t.start()
+            t_list.append(t)
+        for thread in t_list:
+            thread.join()
+        return mini_buffer
+
+    def get_batch(self, buf, mini_size):
+
         select_index = np.random.choice(a=len(self.states), size=mini_size, replace=False, p=None)
         buf.state_list = self.states[select_index]
         # buf.edge_list = self.edges[select_index]
@@ -170,4 +181,3 @@ class BatchBuffer:
         buf.reward_list = self.rewards[select_index]
         buf.returns = torch.index_select(self.returns, dim=1, index=torch.tensor(select_index).to(device))
         buf.adv = torch.index_select(self.adv, dim=1, index=torch.tensor(select_index).to(device))
-        return buf

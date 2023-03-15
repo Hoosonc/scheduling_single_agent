@@ -71,36 +71,22 @@ class Environment:
         self.d_total_time = 0
         self.p_total_time = 0
         self.p_s_f = np.zeros((2, self.patients.player_num))
-        self.cla_by_did = self.reg_detail.groupby("did")
-        self.cla_by_pid = self.reg_detail.groupby("pid")
-        self.doctor.reset(self.cla_by_did)
-        self.patients.reset(self.cla_by_pid)
+        self.doctor.reset(self.reg_detail)
+        self.patients.reset(self.reg_detail)
         self.done = False
         self.done_node = []
-        # self.patients.get_multi_reg_edge()
-        # self.patients.edge = np.array(self.patients.edge).T
-        # self.patients.edge[0, :] += self.reg_num
 
-        # self.doctor.get_edge()
-        # self.doctor.edge = np.array(self.doctor.edge).T
-        # self.doctor.edge[0, :] += self.reg_num + len(self.patients.multi_reg_pid)
         self.p_sc_jobs = self.patients.reg_job_id_list.copy()
         self.d_sc_jobs = self.doctor.reg_job_id_list.copy()
         self.hole_total_time = 0
 
-        # self.reg_nodes = np.zeros((self.reg_num, 4))
-        # self.reg_nodes[:, 3] = self.reg_detail["id"].values
-        # self.reg_nodes[:, 2] = self.reg_detail["pro_time"].values / (self.max_time/self.doctor.player_num)
-        # self.reg_nodes[:, 0] = 1
-        self.edge_attr = np.zeros((self.reg_num, 4), dtype="float32")
-        self.edge_attr[:, 0] = 1
         self.nodes = np.zeros((self.reg_num, 7), dtype="float32")
         self.nodes[:, 0] = True
-        self.nodes[:, 2] = self.reg_detail["pro_time"].values
+        self.nodes[:, 2] = self.reg_detail["pro_time"].values / (self.max_time/5)
         self.nodes[:, 3] = self.reg_detail["id"].values
         self.nodes[:, 4] = self.reg_detail["pid"].values
         self.nodes[:, 5] = self.reg_detail["did"].values
-        # self.get_edge()
+
         self.d_tasks = [[] for _ in range(self.doctor.player_num)]
         self.p_tasks = [[] for _ in range(self.patients.player_num)]
         self.tasks = []
@@ -120,36 +106,36 @@ class Environment:
                 d_last_time = 0
             else:
                 sc_d = pd.DataFrame(np.array(doc.schedule_list[int(d_action)]),
-                                    columns=['pid', 'start_time', 'pro_time', 'finish_time',
+                                    columns=['did', 'pid', 'start_time', 'pro_time', 'finish_time',
                                              "step", "job_id"]).sort_values("start_time").values
                 d_last_time = sc_d[int(self.doctor.free_pos[d_action]) - 1][3]
-            if insert_data[3] > d_last_time:
-                self.d_total_time += (insert_data[3] - d_last_time)
+            if insert_data[4] > d_last_time:
+                self.d_total_time += (insert_data[4] - d_last_time)
                 # self.doctor.state[d_action][0] = insert_data[3] / (self.max_time/self.doctor.player_num)  # 修改医生工作总时间
             if last_schedule_list[0][p_action] == 0:
-                self.p_s_f[0][p_action] = insert_data[1]
-                self.p_s_f[1][p_action] = insert_data[3]
+                self.p_s_f[0][p_action] = insert_data[2]
+                self.p_s_f[1][p_action] = insert_data[4]
             else:
                 if last_schedule_list[0][p_action] == 1:
-                    if insert_data[3] <= self.p_s_f[0][p_action]:
-                        self.p_s_f[0][p_action] = insert_data[1]
-                    elif insert_data[3] > self.p_s_f[1][p_action]:
-                        self.p_s_f[1][p_action] = insert_data[3]
+                    if insert_data[4] <= self.p_s_f[0][p_action]:
+                        self.p_s_f[0][p_action] = insert_data[2]
+                    elif insert_data[4] > self.p_s_f[1][p_action]:
+                        self.p_s_f[1][p_action] = insert_data[4]
                     self.p_total_time += self.p_s_f[1][p_action] - self.p_s_f[0][p_action]
                 elif last_schedule_list[0][p_action] > 1:
                     old_time = self.p_s_f[1][p_action] - self.p_s_f[0][p_action]
-                    if insert_data[3] <= self.p_s_f[0][p_action]:
-                        self.p_s_f[0][p_action] = insert_data[1]
-                    elif insert_data[3] > self.p_s_f[1][p_action]:
-                        self.p_s_f[1][p_action] = insert_data[3]
+                    if insert_data[4] <= self.p_s_f[0][p_action]:
+                        self.p_s_f[0][p_action] = insert_data[2]
+                    elif insert_data[4] > self.p_s_f[1][p_action]:
+                        self.p_s_f[1][p_action] = insert_data[4]
                     assert self.p_s_f[1][p_action] - self.p_s_f[0][p_action] - old_time >= 0
                     self.p_total_time += self.p_s_f[1][p_action] - self.p_s_f[0][p_action] - old_time
 
             insert_data.append(step)
             insert_data.append(action)
             doc.insert_patient(insert_data, d_action)
-            self.d_tasks[d_action].append([insert_data[1], insert_data[3]])
-            self.p_tasks[p_action].append([insert_data[1], insert_data[3]])
+            self.d_tasks[d_action].append([insert_data[2], insert_data[4]])
+            self.p_tasks[p_action].append([insert_data[2], insert_data[4]])
             self.patients.reg_num_list[p_action] -= 1
             # self.done_node.append(action)
             # self.render_data.append([d_action, p_action, insert_data[1], insert_data[2], insert_data[3]])
@@ -165,8 +151,8 @@ class Environment:
             # self.doctor.state[d_action][1] = self.doctor.total_idle_time[d_action] /
             # (self.max_time/self.doctor.player_num)
 
-            self.patients.schedule_info[p_action].append([d_action, insert_data[1],
-                                                          insert_data[3], insert_data[5]])
+            self.patients.schedule_info[p_action].append([d_action, insert_data[2],
+                                                          insert_data[4], insert_data[6]])
 
             last_schedule_list[0][p_action] += 1
             if last_schedule_list[0][p_action] != 0:
@@ -178,11 +164,11 @@ class Environment:
                 total_idle_time_p = np.sum(self.patients.total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
 
-            reward = 1 - (reward / (self.max_time/self.doctor.player_num))
+            reward = 1 - (reward / (self.max_time/5))
 
             # reward = max(0., reward)
 
-            self.update_states(action, insert_data[1], p_action, d_action)
+            self.update_states(action, insert_data[2], p_action, d_action)
         if sum(self.patients.reg_num_list) == 0:
             self.done = True
 
@@ -191,7 +177,7 @@ class Environment:
     def update_states(self, job_id, start_time, p_index, d_index):
         self.done_node.append(job_id)
         self.nodes[job_id][0] = False
-        self.nodes[job_id][1] = start_time
+        self.nodes[job_id][1] = start_time / (self.max_time/5)
         self.nodes[job_id][6] = start_time
         self.update_edge(p_index, d_index)
 
@@ -223,7 +209,7 @@ class Environment:
                 if self.nodes[job_id][0]:
                     p_id = self.reg_detail.values[job_id][0]
                     d_id = self.reg_detail.values[job_id][1]
-                    self.nodes[job_id][6] = self.find_position(p_id, d_id, job_id)[1]
+                    self.nodes[job_id][6] = self.find_position(p_id, d_id, job_id)[2]
             reg_states = self.nodes[np.array(reg_job_id_list)]
             reg_states = reg_states[reg_states[:, 6].argsort()]
             tree = []
@@ -312,12 +298,12 @@ class Environment:
             self.tasks.extend(self.p_tasks[pid])
         holes = self.find_idle_times(pro_time)
         if holes:
-            insert_data = [pid, holes[0][0], pro_time, holes[0][0] + pro_time]
+            insert_data = [did, pid, holes[0][0], pro_time, holes[0][0] + pro_time]
         else:
             if last_time <= last_schedule_list[1][pid]:
-                insert_data = [pid, last_schedule_list[1][pid], pro_time, last_schedule_list[1][pid] + pro_time]
+                insert_data = [did, pid, last_schedule_list[1][pid], pro_time, last_schedule_list[1][pid] + pro_time]
             else:
-                insert_data = [pid, last_time, pro_time, last_time + pro_time]
+                insert_data = [did, pid, last_time, pro_time, last_time + pro_time]
         return insert_data
 
     def find_idle_times(self, pro_time):

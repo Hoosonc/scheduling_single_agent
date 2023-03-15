@@ -17,9 +17,9 @@ class Params:
                                  help='learning rate (default: 0.0001)')
         self.parser.add_argument('--epsilon', type=float, default=0.25,
                                  help='epsilon (default: 0.3)')
-        self.parser.add_argument('--gamma', type=float, default=1,
+        self.parser.add_argument('--gamma', type=float, default=0.99,
                                  help='discount factor for rewards (default: 0.99)')
-        self.parser.add_argument('--gae-lambda', type=float, default=1,
+        self.parser.add_argument('--gae-lambda', type=float, default=0.95,
                                  help='lambda parameter for GAE (default: 1.00)')
         self.parser.add_argument('--entropy-coefficient', type=float, default=0.01,
                                  help='entropy term coefficient (default: 0.01)')
@@ -35,13 +35,13 @@ class Params:
                                  help='maximum length of an episode (default: 1)')
         self.parser.add_argument('--update_num', type=int, default=3,
                                  help='')
-        self.parser.add_argument('--env_num', type=int, default=3,
+        self.parser.add_argument('--env_num', type=int, default=5,
                                  help='')
-        self.parser.add_argument('--mini_size', type=int, default=70,
+        self.parser.add_argument('--mini_size', type=int, default=100,
                                  help='')
-        self.parser.add_argument('--episode', type=int, default=6000,
+        self.parser.add_argument('--episode', type=int, default=12000,
                                  help='How many episode to train the RL algorithm')
-        self.parser.add_argument('--reg-path', type=str, default='./data/10_60_78.csv',
+        self.parser.add_argument('--reg-path', type=str, default='./data/10_80_99.csv',
                                  help='The path of Reg file')
         self.parser.add_argument('--doc-path', type=str, default='./data/doc.csv',
                                  help='The path of doc file')

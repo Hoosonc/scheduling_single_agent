@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 # from threading import Thread
 from torch.nn import Linear
+from threading import Thread
 # from torch_geometric.nn import GIN
 from torch_geometric.nn import GATConv
 # from torch_geometric.nn import GCNConv
@@ -42,6 +43,7 @@ class GCN(torch.nn.Module):
             Linear(reg_num*16, reg_num),
             Linear(reg_num, 1)
         )
+        self.mini_bf_list = [mini_bf() for _ in range(20)]
         # self.embedding_process = nn.Linear(4, 4)
         # self.embedding_p = nn.Linear(1, 4)
         # self.embedding_d = nn.Linear(2, 4)
@@ -77,15 +79,51 @@ class GCN(torch.nn.Module):
         log_prob_list = []
         value_list = []
         entropy = []
-        for i in range(buf.state_list.shape[0]):
-            p, v = self.forward(buf.state_list[i], buf.edge_list[i])
-            policy_head = Categorical(probs=p)
-            value_list.append(v)
-            log_prob_list.append(policy_head.log_prob(torch.tensor(buf.action_list[i]).to(device)))
-            entropy.append(policy_head.entropy())
+        t_list = []
+        # 20个线程，每个线程获取多个step的值
+        mini_batch = buf.state_list.shape[0] // 20
+        remainder = buf.state_list.shape[0] % 20
+        for i in range(20):
+            start = i * mini_batch
+            end = (i+1) * mini_batch
+            if i == 19:
+                end += remainder
+            t = Thread(target=self.get_forward, args=(buf, start, end, i))
+            t.start()
+            t_list.append(t)
+
+        for thread in t_list:
+            thread.join()
+
+        for bf in self.mini_bf_list:
+            value_list.extend(bf.value_list)
+            log_prob_list.extend(bf.log_prob_list)
+            entropy.extend(bf.entropy)
+            bf.reset()
 
         values = torch.cat(value_list, dim=0).view(1, -1)
         log_prob = torch.cat(log_prob_list, dim=0).view(1, -1)
         entropy = torch.cat(entropy, dim=0).view(1, -1)
 
         return values, log_prob, entropy
+
+    def get_forward(self, buf, start, end, bf_nb):
+        for i in range(start, end):
+            p, v = self.forward(buf.state_list[i], buf.edge_list[i])
+            policy_head = Categorical(probs=p)
+            self.mini_bf_list[bf_nb].value_list.append(v)
+            self.mini_bf_list[bf_nb].log_prob_list.append(policy_head.log_prob(
+                torch.tensor(buf.action_list[i]).to(device)))
+            self.mini_bf_list[bf_nb].entropy.append(policy_head.entropy())
+
+
+class mini_bf:
+    def __init__(self):
+        self.log_prob_list = []
+        self.value_list = []
+        self.entropy = []
+
+    def reset(self):
+        self.log_prob_list = []
+        self.value_list = []
+        self.entropy = []

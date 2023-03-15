@@ -42,15 +42,18 @@ class Player:
         self.total_idle_time = np.zeros((self.player_num,))  # 总间隔时间
         self.op_time = np.zeros((self.player_num,))  # 操作时间和
 
-        self.idle_time_a = np.zeros((self.player_num,))
-        self.idle_time_p = np.zeros((self.player_num,))
+        # self.idle_time_a = np.zeros((self.player_num,))
+        # self.idle_time_p = np.zeros((self.player_num,))
 
-    def get_job_id_list(self, cla_by_id):
+    def get_job_id_list(self, d_p):
         self.reg_job_id_list = [[] for _ in range(self.player_num)]
-        for c_info in cla_by_id:
-            info = c_info[1]["id"].values
-            for job_id in info:
-                self.reg_job_id_list[int(c_info[0])].append(int(job_id))
+        file = self.file.values
+        for i in range(self.player_num):
+            if d_p == 0:
+                job_id_list = file[:, 3][file[:, 0] == i]
+            else:
+                job_id_list = file[:, 3][file[:, 1] == i]
+            self.reg_job_id_list[i].extend(job_id_list.tolist())
 
     def load_param(self):
         pass

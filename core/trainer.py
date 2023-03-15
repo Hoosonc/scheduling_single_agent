@@ -42,7 +42,7 @@ class Trainer:
 
         self.ppo = PPOClip(self.model, device, args)
         self.total_time = 0
-        self.min_idle_time = 5
+        self.min_idle_time = 1
         self.min_total_time = 1800
         self.min_d_idle = 1
         self.scheduled_data = []
@@ -77,6 +77,13 @@ class Trainer:
                 total_time = env.d_total_time + env.p_total_time
                 self.idle_total.append([d_idle, p_idle, total_idle_time,
                                         env.d_total_time, env.p_total_time, total_time, episode])
+                # self.scheduled_data = []
+                # for did in range(self.doctor.player_num):
+                #     sc = env.doctor.schedule_list[did]
+                #     self.scheduled_data.extend(sc)
+                # self.file_name = f"/10_60/{int(d_idle)}_{int(env.d_total_time)}"
+                # self.save_data(self.file_name)
+
                 if d_idle < self.min_idle_time:
                     self.min_idle_time = d_idle
                     self.scheduled_data = []
@@ -89,11 +96,12 @@ class Trainer:
 
             # update net
             self.buffer.get_data()
+            mini_buffer = self.buffer.get_mini_batch(self.args.mini_size, self.args.update_num)
             loss = 0
             for i in range(0, self.args.update_num):
                 # self.env.reset()
 
-                buf = self.buffer.get_mini_batch(self.args.mini_size)
+                buf = mini_buffer[i]
                 loss = self.ppo.learn(buf)
             self.buffer.reset()
 
