@@ -73,15 +73,9 @@ class Patient(Player):
              [该病人上一个号结束的时间]]
         """
         self.reg_list = self.static_reg_list.copy()
-        # for patient in self.file.values:
-        #     pid = patient[0]
-        #     did = patient[1]
-        #     self.reg_list[pid].append(did)
+
         self.mask_matrix = self.static_mask_matrix.copy()
-        # for i in range(len(self.reg_list)):
-        #     for did in self.reg_list[i]:
-        #         self.mask_matrix[int(did)][i] = 1
-        # self.state[:, :1] = self.action_mask.reshape(-1, 1)
+
         self.get_job_id_list(0)
         self.get_edge()
         self.reset_()

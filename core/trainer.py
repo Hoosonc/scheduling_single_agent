@@ -113,7 +113,7 @@ class Trainer:
             # print("总时间：", self.env.get_total_time())
             if episode % 30 == 0:
                 print("loss:", loss.item())
-                print("mean_reward:", np.mean(self.sum_reward))
+                print("mean_reward:", np.mean(self.sum_reward), episode)
             if episode % 120 == 0:
                 self.episode = episode
                 self.save_model(self.model_name)

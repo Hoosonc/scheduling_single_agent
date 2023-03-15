@@ -108,7 +108,7 @@ class Environment:
                 sc_d = pd.DataFrame(np.array(doc.schedule_list[int(d_action)]),
                                     columns=['did', 'pid', 'start_time', 'pro_time', 'finish_time',
                                              "step", "job_id"]).sort_values("start_time").values
-                d_last_time = sc_d[int(self.doctor.free_pos[d_action]) - 1][3]
+                d_last_time = sc_d[int(self.doctor.free_pos[d_action]) - 1][4]
             if insert_data[4] > d_last_time:
                 self.d_total_time += (insert_data[4] - d_last_time)
                 # self.doctor.state[d_action][0] = insert_data[3] / (self.max_time/self.doctor.player_num)  # 修改医生工作总时间
@@ -253,10 +253,10 @@ class Environment:
         # ['pid', 'start_time', 'pro_time', 'finish_time', "step", "job_id"]
         sc = np.array(doc.schedule_list[int(did)])
         if len(sc) >= 1:
-            idx = sc[:, 1].argsort(axis=0).reshape(1, -1)  # 按照start_time的值排序
+            idx = sc[:, 2].argsort(axis=0).reshape(1, -1)  # 按照start_time的值排序
             sc = sc[idx, :][0]
-            hole_total_time += sc[0][1]
-            hole_total_time += (sc[1:, 1] - sc[0:-1, 3]).sum()
+            hole_total_time += sc[0][2]
+            hole_total_time += (sc[1:, 2] - sc[0:-1, 4]).sum()
         return hole_total_time
 
     def cal_p_idle(self, sc, pid):
@@ -287,7 +287,7 @@ class Environment:
         last_time = 0
         if schedule_list:
             schedule_list = np.array(schedule_list)
-            last_time = schedule_list[:, 3].max()
+            last_time = schedule_list[:, 4].max()
             self.tasks.extend(self.d_tasks[did])
 
         # 该病人的排班情况
