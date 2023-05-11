@@ -111,16 +111,16 @@ class Trainer:
 
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())
-            if episode % 30 == 0:
+            if episode % 1 == 0:
                 print("loss:", loss.item())
                 print("mean_reward:", np.mean(self.sum_reward), episode)
             if episode % 120 == 0:
                 self.episode = episode
-                self.save_model(self.model_name)
-                self.save_info(self.r_l, f"r_l_{self.model_name}",
-                               ['reward', 'loss', 'ep'], "r_l")
-                self.save_info(self.idle_total, f"i_t_{self.model_name}",
-                               ['d_idle', 'p_idle', 'idle', 'total_d', 'total_p', 'total', 'ep'], "i_t")
+                # self.save_model(self.model_name)
+                # self.save_info(self.r_l, f"r_l_{self.model_name}",
+                #                ['reward', 'loss', 'ep'], "r_l")
+                # self.save_info(self.idle_total, f"i_t_{self.model_name}",
+                #                ['d_idle', 'p_idle', 'idle', 'total_d', 'total_p', 'total', 'ep'], "i_t")
                 self.r_l = []
                 self.idle_total = []
 
