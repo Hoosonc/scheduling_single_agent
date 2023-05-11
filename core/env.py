@@ -11,6 +11,7 @@ import numpy as np
 import torch
 # import torch.nn.functional as f
 import pandas as pd
+from tools.get_data_txt import get_data
 from sklearn.utils import shuffle
 from core.doctor import Doctor
 from core.patient import Patient
@@ -22,24 +23,14 @@ class Environment:
     def __init__(self, args):
         # init origin attributes
         self.args = args
-        self.doc_file = pd.read_csv(args.doc_path, encoding='utf-8-sig').fillna('')
-        self.reg_file = pd.read_csv(args.reg_path, encoding='utf-8-sig').fillna('')
-        self.cla_by_did = None
-        self.cla_by_pid = None
-        self.reg_num = self.reg_file.shape[0]
-        self.doctor = Doctor(self.reg_file, args)
-        self.doctor.init_doc_info()
-        self.patients = Patient(self.reg_file, args, self.doctor.player_num)
-        self.patients.init_patient_info()
-        # self.p_nodes = np.zeros((self.patients.player_num, self.))
-        # self.d_nodes = np.ones((self.doctor.player_num, 1))
-        # self.nodes = np.concatenate([self.p_nodes, self.d_nodes])
-        self.nodes = None
+        (self.all_job_list, self.jobs, self.machines,
+         self.max_time_op, self.jobs_length, self.sum_op) = get_data(args.reg_path)
+        self.edge_matrix = None
+        self.state = None
+        self.p_sc_list = []
+        self.d_sc_list = []
+        self.action_mask = None
 
-        # self.reg_nodes = np.zeros((self.reg_num, 4))
-        self.multi_reg_num = self.patients.reg_num[self.patients.reg_num > 1].sum()
-        self.edge = None
-        self.edge_attr = np.zeros((self.reg_num, 4))
         self.reg_detail = None
         self.done = False
         self.pos = []
@@ -53,7 +44,7 @@ class Environment:
         self.d_total_time = 0
         self.p_total_time = 0
         self.p_s_f = np.zeros((2, self.patients.player_num))
-        self.max_time = self.reg_file["pro_time"].sum()
+
         self.edge_idle = None
         self.edge_connect = None
         self.edge_mask = None
@@ -66,8 +57,12 @@ class Environment:
 
     def reset(self):
         torch.manual_seed(random.randint(1000, 5000))
-        self.reg_detail = shuffle(self.reg_file)
-        self.reg_detail["id"] = np.arange(0, self.reg_detail.shape[0])
+        self.init_edge_matrix()
+        self.state = self.all_job_list.copy()
+        self.state = np.concatenate([self.state, np.zeros(self.state.shape[0], 2)], axis=1)  # 添加“是否处理”，“开始时间”
+        # add a column 'id'
+        self.state = np.concatenate([self.state, np.arange(self.state.shape[0]).reshape(-1, 1)], axis=1)
+        self.action_mask = np.zeros((self.jobs, self.machines))
         self.d_total_time = 0
         self.p_total_time = 0
         self.p_s_f = np.zeros((2, self.patients.player_num))
@@ -80,13 +75,6 @@ class Environment:
         self.d_sc_jobs = self.doctor.reg_job_id_list.copy()
         self.hole_total_time = 0
 
-        self.nodes = np.zeros((self.reg_num, 6), dtype="float32")
-        self.nodes[:, 0] = True
-        self.nodes[:, 2] = self.reg_detail["pro_time"].values / (self.max_time/5)
-        self.nodes[:, 3] = self.reg_detail["id"].values
-        # self.nodes[:, 4] = self.reg_detail["pid"].values
-        self.nodes[:, 4] = self.reg_detail["did"].values
-
         self.d_tasks = [[] for _ in range(self.doctor.player_num)]
         self.p_tasks = [[] for _ in range(self.patients.player_num)]
         self.tasks = []
@@ -94,13 +82,21 @@ class Environment:
 
     def step(self, action, step):
         reward = 0.
-        p_action = self.reg_detail.values[action][0]
+        if self.action_mask[action] == self.machines:
+            pass
+        else:
+            pid = self.state[int(action*self.machines+self.action_mask[action])][0]
+            did = self.state[int(action * self.machines + self.action_mask[action])][1]
+            process_id = self.state[int(action * self.machines + self.action_mask[action])][-1]
+            pro_time = self.state[int(action * self.machines + self.action_mask[action])][2]
+            insert_data = self.find_position(pid, did, process_id, pro_time)
+        p_action = self.state[action][0]
         d_action = self.reg_detail.values[action][1]
         if self.patients.mask_matrix[d_action][p_action]:
             doc = self.doctor
             last_schedule_list = self.patients.last_schedule
 
-            insert_data = self.find_position(p_action, d_action, action)
+            insert_data = self.find_position(p_action, d_action, action, )
 
             if self.doctor.free_pos[d_action] == 0:
                 d_last_time = 0
@@ -197,47 +193,6 @@ class Environment:
             total_time += self.doctor.schedule_list[i][int(self.doctor.free_pos[i] - 1)][3]
         return total_time
 
-    def update_edge(self, pid, did):
-
-        self.patients.edge[pid] = self.get_edge(self.patients.reg_job_id_list[pid])
-        self.doctor.edge[did] = self.get_edge(self.doctor.reg_job_id_list[did])
-
-    def get_edge(self, reg_job_id_list):
-        edge = []
-        if len(reg_job_id_list) > 1:
-            for job_id in reg_job_id_list:
-                if self.nodes[job_id][0]:
-                    p_id = self.reg_detail.values[job_id][0]
-                    d_id = self.reg_detail.values[job_id][1]
-                    self.nodes[job_id][5] = self.find_position(p_id, d_id, job_id)[2]
-            reg_states = self.nodes[np.array(reg_job_id_list)]
-            reg_states = reg_states[reg_states[:, 5].argsort()]
-            tree = []
-            degree = 0
-            for i in range(reg_states.shape[0]):
-                if i == 0:
-                    tree.append([int(reg_states[i][3])])
-                else:
-                    if reg_states[i][1] > reg_states[i - 1][1]:
-                        degree += 1
-                        tree.append([int(reg_states[i][3])])
-                    else:
-                        tree[degree].append(int(reg_states[i][3]))
-            for d in range(len(tree)):
-                if len(tree[d]) > 1:
-                    for s in tree[d]:
-                        for end in tree[d]:
-                            if s != end and [s, end] not in edge:
-                                edge.append([s, end])
-                if d != 0:
-                    for s in tree[d - 1]:
-                        for end in tree[d]:
-                            assert s != end
-                            if s != end and [s, end] not in edge:
-                                edge.append([s, end])
-
-        return edge
-
     def edge_input(self):
         edge = []
         for i in range(self.patients.player_num):
@@ -247,11 +202,19 @@ class Environment:
         edge = np.array(edge, dtype="int64").T
         return edge
 
+    def init_edge_matrix(self):
+        self.edge_matrix = np.eye(self.jobs * self.machines, dtype="int64")
+        for job_idx in range(self.jobs):
+            random_process = np.random.choice(a=self.machines, size=self.machines)
+            for i in range(self.machines):
+                if i != 0:
+                    self.edge_matrix[
+                        job_idx*self.machines+random_process[i-1]][job_idx*self.machines+random_process[i]] = 1
+
     def cal_hole(self, did):
-        doc = self.doctor
         hole_total_time = 0
         # ['pid', 'start_time', 'pro_time', 'finish_time', "step", "job_id"]
-        sc = np.array(doc.schedule_list[int(did)])
+        sc = np.array(self.d_sc_list[int(did)])
         if len(sc) >= 1:
             idx = sc[:, 2].argsort(axis=0).reshape(1, -1)  # 按照start_time的值排序
             sc = sc[idx, :][0]
@@ -259,11 +222,10 @@ class Environment:
             hole_total_time += (sc[1:, 2] - sc[0:-1, 4]).sum()
         return hole_total_time
 
-    def cal_p_idle(self, sc, pid):
+    def cal_p_idle(self, pid):
         total_idle_time = 0.
-        patients = self.patients
         # ["did", "start_time", "finish_time", "job_id"]
-        sc = np.array(sc)
+        sc = np.array(self.p_sc_list[pid])
         idx = sc[:, 1].argsort(axis=0).reshape(1, -1)  # 按照start_time的值排序
         sc = sc[idx, :][0]
         last_schedule_list = patients.last_schedule
@@ -272,17 +234,14 @@ class Environment:
         last_schedule_list[1][pid] = sc[len(sc) - 1][2]
         return total_idle_time
 
-    def find_position(self, pid, did, job_id):
-        doc = self.doctor
+    def find_position(self, pid, did, job_id, pro_time):
         # 当前医生的排班列表位置
         # d_free_pos = int(doc.free_pos[did])
         # patient = self.patients
-        # 处理时间
-        pro_time = self.reg_detail.values[job_id][2]
 
         self.tasks = []
         # 该医生的排班列表
-        schedule_list = doc.schedule_list[int(did)]
+        schedule_list = self.d_sc_list[int(did)]
         # 排班列表的最后结束时间
         last_time = 0
         if schedule_list:
@@ -333,9 +292,9 @@ class Environment:
 
         return idle_times
 
-    def choose_action(self, data, edge, model):
+    def choose_action(self, data, model):
 
-        prob, value = model(data, edge)
+        prob, value = model(data)
 
         mask = torch.from_numpy(self.patients.action_mask).view(1, -1).to(device)
         prob[~mask] = 0

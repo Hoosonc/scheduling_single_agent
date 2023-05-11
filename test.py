@@ -41,6 +41,5 @@ def transition_time():
 
 
 if __name__ == '__main__':
-    x = 0.81 ** 24
-    b = 6000 / 240
-    print(x)
+    arr = np.arange(10)
+    print(arr)
