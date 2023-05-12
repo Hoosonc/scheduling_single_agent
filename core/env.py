@@ -6,7 +6,7 @@
 # import random
 # import matplotlib.pyplot as plt
 import random
-from torch.distributions.categorical import Categorical
+
 import numpy as np
 import torch
 # import torch.nn.functional as f
@@ -60,11 +60,11 @@ class Environment:
         torch.manual_seed(random.randint(1000, 5000))
         self.init_edge_matrix()
         self.state = self.all_job_list.copy()
-        self.state = np.concatenate([self.state, np.ones(self.state.shape[0], 1)], axis=1)  # 添加“是否处理”
-        self.state = np.concatenate([self.state, np.zeros(self.state.shape[0], 1)], axis=1)  # add “开始时间”
+        self.state = np.concatenate([self.state, np.ones((self.state.shape[0], 1))], axis=1)  # 添加“是否处理”
+        self.state = np.concatenate([self.state, np.zeros((self.state.shape[0], 1))], axis=1)  # add “开始时间”
         # add a column 'id'
         # self.state = np.concatenate([self.state, np.arange(self.state.shape[0]).reshape(-1, 1)], axis=1)
-        self.action_mask = np.zeros((self.jobs, self.machines))
+        self.action_mask = np.zeros((self.jobs,))
         self.p_last_schedule = np.zeros((2, self.jobs))  # 上一个号的结束时间
         """
              [[已处理号数]
@@ -94,15 +94,17 @@ class Environment:
         if self.action_mask[action] == self.machines:
             pass
         else:
-            pid = self.state[int(action * self.machines + self.action_mask[action])][0]
-            did = self.state[int(action * self.machines + self.action_mask[action])][1]
+            pid = int(self.state[int(action * self.machines + self.action_mask[action]), 0])
+            did = int(self.state[int(action * self.machines + self.action_mask[action]), 1])
             last_schedule_list = self.p_last_schedule
             process_id = int(action * self.machines + self.action_mask[action])
-            pro_time = self.state[int(action * self.machines + self.action_mask[action])][2]
+            pro_time = self.state[int(action * self.machines + self.action_mask[action]), 2]
             insert_data = self.find_position(pid, did, process_id, pro_time)
             if self.d_position[did] == 0:
                 d_last_time = 0
             else:
+                prev_process = self.d_sc_list[-1][6]
+                self.edge_matrix[prev_process][process_id] = 1
                 sc_d = pd.DataFrame(np.array(self.d_sc_list[did]),
                                     columns=['did', 'pid', 'start_time', 'pro_time', 'finish_time',
                                              "step", "job_id"]).sort_values("start_time").values
@@ -129,7 +131,8 @@ class Environment:
                     assert self.p_s_f[1][pid] - self.p_s_f[0][pid] - old_time >= 0
                     self.p_total_time += self.p_s_f[1][pid] - self.p_s_f[0][pid] - old_time
             insert_data.append(step)
-            insert_data.append(action)
+            insert_data.append(process_id)
+
             self.d_sc_list[did].append(insert_data)
             self.d_tasks[did].append([insert_data[2], insert_data[4]])
             self.p_tasks[pid].append([insert_data[2], insert_data[4]])
@@ -146,30 +149,30 @@ class Environment:
             if last_schedule_list[0][pid] != 0:
                 patient_idle_time = self.cal_p_idle(pid)
 
-                # reward += (patient_idle_time - self.patients.total_idle_time[pid])
+                reward += (patient_idle_time - self.p_total_idle_time[pid])
                 self.p_total_idle_time[pid] = patient_idle_time
                 total_idle_time_p = np.sum(self.p_total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
 
-            reward = 1 - (reward / 1)
+            reward = 1 - reward/self.jobs_length.max()
 
             self.update_states(insert_data[2], pid, did, process_id)
-
+        # print(reward)
         if sum(self.state[:, 3]) == 0:
             self.done = True
 
         return self.done, reward
 
     def update_states(self, start_time, pid, did, process_id):
-        self.state[process_id][3] = 0
-        self.state[process_id][4] = start_time
+        self.state[process_id, 3] = 0
+        self.state[process_id, 4] = start_time
         self.action_mask[pid] += 1
 
-    def get_total_time(self):
-        total_time = 0
-        for i in range(self.doctor.player_num):
-            total_time += self.doctor.schedule_list[i][int(self.doctor.free_pos[i] - 1)][3]
-        return total_time
+    # def get_total_time(self):
+    #     total_time = 0
+    #     for i in range(self.doctor.player_num):
+    #         total_time += self.doctor.schedule_list[i][int(self.doctor.free_pos[i] - 1)][3]
+    #     return total_time
 
     def init_edge_matrix(self):
         self.edge_matrix = np.eye(self.jobs * self.machines, dtype="int64")
@@ -258,21 +261,6 @@ class Environment:
             prev_end_time = max(prev_end_time, curr_end_time)
 
         return idle_times
-
-    def choose_action(self, data, model):
-
-        prob, value = model(data)
-
-        mask = torch.from_numpy(self.patients.action_mask).view(1, -1).to(device)
-        prob[~mask] = 0
-        # prob[mask] = prob[mask] + 1
-        # prob = f.softmax(prob, dim=-1)  # 归一化
-        prob = prob / prob.sum()
-
-        policy_head = Categorical(probs=prob)
-        action = policy_head.sample()
-
-        return action.item(), value, policy_head.log_prob(action)
 
 
 if __name__ == '__main__':

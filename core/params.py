@@ -41,7 +41,7 @@ class Params:
                                  help='')
         self.parser.add_argument('--episode', type=int, default=12000,
                                  help='How many episode to train the RL algorithm')
-        self.parser.add_argument('--reg-path', type=str, default='./data/instances/ta01.csv',
+        self.parser.add_argument('--reg-path', type=str, default='./data/instances/ta01',
                                  help='The path of Reg file')
         self.parser.add_argument('--doc-path', type=str, default='./data/doc.csv',
                                  help='The path of doc file')

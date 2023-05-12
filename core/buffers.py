@@ -23,11 +23,11 @@ class Buffer:
         self.lam = lam
         self.log_prob = None
 
-    def add_data(self, state_t=None, edge_t=None, action_t=None, reward_t=None,
+    def add_data(self, state_t=None, action_t=None, reward_t=None,
                  terminal_t=None, value_t=None, log_prob_t=None):
 
         self.state_list.append(state_t)
-        self.edge_list.append(edge_t)
+        # self.edge_list.append(edge_t)
         # self.edge_attr_list.append(edge_attr_t)
         self.action_list.append(action_t)
         self.reward_list.append(reward_t)
@@ -109,12 +109,12 @@ class BatchBuffer:
         self.log_prob = None
         self.adv = None
 
-    def add_batch_data(self, states_t=None, edge_t=None, actions_t=None,
+    def add_batch_data(self, states_t=None, actions_t=None,
                        rewards_t=None, terminals_t=None, values_t=None, log_prob_t=None):
         assert len(states_t) == len(actions_t) == len(rewards_t) == len(terminals_t) \
                == (len(values_t) - 1) == len(log_prob_t)
         for i in range(self.buffer_num):
-            self.buffer_list[i].add_data(states_t, edge_t, actions_t, rewards_t,
+            self.buffer_list[i].add_data(states_t, actions_t, rewards_t,
                                          terminals_t, values_t, log_prob_t)
 
     def get_data(self):
@@ -140,7 +140,7 @@ class BatchBuffer:
             return_list.append(buf.returns)
             adv_list.append(buf.adv)
 
-        self.states = np.array(state_list)
+        self.states = state_list
         # self.edges = np.array(edge_list)
         self.edges = edge_list
         # self.edges_attr = np.array(edge_attr_list)
@@ -168,10 +168,10 @@ class BatchBuffer:
     def get_batch(self, buf, mini_size):
 
         select_index = np.random.choice(a=len(self.states), size=mini_size, replace=False, p=None)
-        buf.state_list = self.states[select_index]
+        # buf.state_list = self.states[select_index]
         # buf.edge_list = self.edges[select_index]
         for index in select_index:
-            buf.edge_list.append(self.edges[index])
+            buf.state_list.append(self.states[index])
         # buf.edge_attr_list = self.edges_attr[select_index]
         buf.action_list = self.actions[select_index]
         buf.value_list = torch.index_select(self.values.view(1, -1), dim=1,

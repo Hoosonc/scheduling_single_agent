@@ -60,13 +60,13 @@ class GCN(torch.nn.Module):
 
     def forward(self, data):
 
-        x = self.conv1(data)
+        x = self.conv1(data.x, data.edge_index)
         x = f.elu(x)
         x = f.dropout(x, training=True)
-        x = self.conv2(x)
+        x = self.conv2(x, data.edge_index)
         x = f.elu(x)
         x = f.dropout(x, training=True)
-        x = self.conv3(x)
+        x = self.conv3(x, data.edge_index)
         x = f.dropout(x, training=True)
         x = x.view(1, -1)
         value = self.critic(x)
@@ -80,8 +80,8 @@ class GCN(torch.nn.Module):
         entropy = []
         t_list = []
         # 20个线程，每个线程获取多个step的值
-        mini_batch = buf.state_list.shape[0] // 20
-        remainder = buf.state_list.shape[0] % 20
+        mini_batch = len(buf.state_list) // 20
+        remainder = len(buf.state_list) % 20
         for i in range(20):
             start = i * mini_batch
             end = (i+1) * mini_batch
