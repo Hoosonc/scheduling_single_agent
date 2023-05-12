@@ -126,7 +126,7 @@ class Trainer:
     def step(self, env, i):
         buffer = self.buffer.buffer_list[i]
         for step in range(env.jobs*env.machines*2):
-            data = env.state[:, 0:-1]
+            data = env.state
             edge_index = coo_matrix(env.edge_matrix)
             data = torch.tensor(data, dtype=torch.float32).to(device)
             edge_index = torch.tensor(edge_index.astype("int64")).to(device)
