@@ -17,6 +17,7 @@ class Buffer:
         self.terminal_list = []
         self.value_list = []
         self.log_prob_list = []
+        self.candidate_list = []
         self.adv = None
         self.returns = None
         self.gamma = gamma
@@ -24,9 +25,10 @@ class Buffer:
         self.log_prob = None
 
     def add_data(self, state_t=None, action_t=None, reward_t=None,
-                 terminal_t=None, value_t=None, log_prob_t=None):
+                 terminal_t=None, value_t=None, log_prob_t=None, candidate=None):
 
         self.state_list.append(state_t)
+        self.candidate_list.append(candidate)
         # self.edge_list.append(edge_t)
         # self.edge_attr_list.append(edge_attr_t)
         self.action_list.append(action_t)
@@ -88,7 +90,7 @@ class BatchBuffer:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.states = None
         self.edges = None
-        self.edges_attr = None
+        self.candidate = None
         self.actions = None
         self.returns = None
         self.rewards = None
@@ -101,7 +103,7 @@ class BatchBuffer:
         # self.mini_buffer = None
         self.states = None
         self.edges = None
-        self.edges_attr = None
+        self.candidate = None
         self.actions = None
         self.returns = None
         self.rewards = None
@@ -120,7 +122,7 @@ class BatchBuffer:
     def get_data(self):
         state_list = []
         edge_list = []
-        edge_attr_list = []
+        candidate_list = []
         action_list = []
         reward_list = []
         # terminal_list = []
@@ -131,7 +133,7 @@ class BatchBuffer:
         for buf in self.buffer_list:
             state_list.extend(buf.state_list)
             edge_list.extend(buf.edge_list)
-            edge_attr_list.extend(buf.edge_attr_list)
+            candidate_list.extend(buf.candidate_list)
             action_list.extend(buf.action_list)
             value_list.extend(buf.value_list)
             log_prob_list.extend(buf.log_prob_list)
@@ -145,7 +147,7 @@ class BatchBuffer:
         self.edges = edge_list
         # self.edges_attr = np.array(edge_attr_list)
         self.actions = np.array(action_list)
-
+        self.candidate = candidate_list
         self.log_prob = torch.cat([log_prob.detach() for log_prob in log_prob_list], dim=0).view(1, -1)
         self.values = torch.cat([value.detach() for value in value_list], dim=0).view(1, -1)
         # self.value_list = np.array(self.value_list)
@@ -172,6 +174,7 @@ class BatchBuffer:
         # buf.edge_list = self.edges[select_index]
         for index in select_index:
             buf.state_list.append(self.states[index])
+            buf.candidate_list.append(self.candidate[index])
         # buf.edge_attr_list = self.edges_attr[select_index]
         buf.action_list = self.actions[select_index]
         buf.value_list = torch.index_select(self.values.view(1, -1), dim=1,

@@ -4,7 +4,7 @@
 # @File : run.py
 # @Software : PyCharm
 from core.params import Params
-from core.trainer1 import Trainer
+from core.trainer import Trainer
 
 if __name__ == '__main__':
     args = Params().args

@@ -60,7 +60,6 @@ class Trainer:
             self.sum_reward = []
             buffer = self.buffer.buffer_list[0]
             done = False
-            steps = 0
             for step in range(self.jobs * self.machines * 5):
                 data = self.env.state
                 edge_index = coo_matrix(self.env.edge_matrix)
@@ -74,11 +73,9 @@ class Trainer:
 
                 done, reward = self.env.step(action, step)
                 self.buffer.buffer_list[0].add_data(data, action, reward, done, value, log_prob)
-                steps = step
                 if done:
                     break
 
-            print("step:", steps)
             if done:
                 buffer.value_list.append(torch.tensor([0]).view(1, 1).to(device))
             else:
@@ -135,10 +132,9 @@ class Trainer:
 
         # 将有效动作的概率值归一化
         valid_probs = masked_probs / masked_probs.sum()
-        try:
-            policy_head = Categorical(probs=valid_probs)
-        except Exception as e:
-            a = e
+
+        policy_head = Categorical(probs=valid_probs)
+
         action = policy_head.sample()
 
         return action.item(), value, policy_head.log_prob(action)

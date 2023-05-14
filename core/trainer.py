@@ -9,7 +9,7 @@
 from core.env import Environment
 import numpy as np
 import torch
-
+from torch.distributions.categorical import Categorical
 # import gc
 # import torch.optim as opt
 import csv
@@ -21,6 +21,8 @@ from torch.optim.lr_scheduler import StepLR
 # from net.cnn import CNN
 # from net.gcn_new import GCN
 # from net.utils import get_now_date as hxc
+from torch_geometric.data import Data
+from scipy.sparse import coo_matrix
 from core.buffers import BatchBuffer
 from core.rl_algorithms import PPOClip
 
@@ -33,12 +35,9 @@ class Trainer:
         self.envs = [Environment(args) for _ in range(args.env_num)]
         for env in self.envs:
             env.reset()
-        self.patient = self.envs[0].patients
-        self.doctor = self.envs[0].doctor
-        self.reg_num = self.envs[0].reg_num
-        # node_num = len(self.patient.multi_reg_pid) + self.reg_num + self.doctor.player_num
-        node_num = self.patient.player_num + self.doctor.player_num
-        self.model = GCN(self.envs[0].reg_num, node_num).to(device)
+        self.jobs = self.envs[0].jobs
+        self.machines = self.envs[0].machines
+        self.model = GCN(self.jobs, self.machines).to(device)
 
         self.ppo = PPOClip(self.model, device, args)
         self.total_time = 0
@@ -53,7 +52,7 @@ class Trainer:
         self.idle_total = []
         self.episode = 0
         self.sum_reward = []
-        self.model_name = f"{self.doctor.player_num}_{self.patient.player_num}_{self.reg_num}"
+        self.model_name = f"{self.jobs}_{self.machines}"
         # self.load_params(self.model_name)
         self.scheduler = StepLR(self.ppo.optimizer, step_size=240, gamma=0.81)
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
@@ -71,27 +70,27 @@ class Trainer:
                 thread.join()
 
             for env in self.envs:
-                p_idle = np.sum(env.patients.total_idle_time)
-                d_idle = np.sum(env.doctor.total_idle_time)
-                total_idle_time = int(p_idle + d_idle)
-                total_time = env.d_total_time + env.p_total_time
-                self.idle_total.append([d_idle, p_idle, total_idle_time,
-                                        env.d_total_time, env.p_total_time, total_time, episode])
-                # self.scheduled_data = []
-                # for did in range(self.doctor.player_num):
-                #     sc = env.doctor.schedule_list[did]
-                #     self.scheduled_data.extend(sc)
-                # self.file_name = f"/10_60/{int(d_idle)}_{int(env.d_total_time)}"
-                # self.save_data(self.file_name)
-
-                if d_idle < self.min_idle_time:
-                    self.min_idle_time = d_idle
-                    self.scheduled_data = []
-                    for did in range(self.doctor.player_num):
-                        sc = env.doctor.schedule_list[did]
-                        self.scheduled_data.extend(sc)
-                    self.file_name = f"{int(d_idle)}_{int(env.d_total_time)}"
-                    self.save_data(self.file_name)
+                # p_idle = np.sum(env.patients.total_idle_time)
+                # d_idle = np.sum(env.doctor.total_idle_time)
+                # total_idle_time = int(p_idle + d_idle)
+                # total_time = env.d_total_time + env.p_total_time
+                # self.idle_total.append([d_idle, p_idle, total_idle_time,
+                #                         env.d_total_time, env.p_total_time, total_time, episode])
+                # # self.scheduled_data = []
+                # # for did in range(self.doctor.player_num):
+                # #     sc = env.doctor.schedule_list[did]
+                # #     self.scheduled_data.extend(sc)
+                # # self.file_name = f"/10_60/{int(d_idle)}_{int(env.d_total_time)}"
+                # # self.save_data(self.file_name)
+                #
+                # if d_idle < self.min_idle_time:
+                #     self.min_idle_time = d_idle
+                #     self.scheduled_data = []
+                #     for did in range(self.doctor.player_num):
+                #         sc = env.doctor.schedule_list[did]
+                #         self.scheduled_data.extend(sc)
+                #     self.file_name = f"{int(d_idle)}_{int(env.d_total_time)}"
+                #     self.save_data(self.file_name)
                 env.reset()
 
             # update net
@@ -126,19 +125,59 @@ class Trainer:
 
     def step(self, env, i):
         buffer = self.buffer.buffer_list[i]
-        for step in range(self.reg_num):
-            # data = [env.reg_nodes, env.patients.multi_patient_state, env.doctor.state]
-            data = env.nodes[:, 0:5]
-            edge = env.edge_input()
-            # edge_attr = env.edge_attr
+        done = False
+        for step in range(self.jobs * self.machines * 5):
+            data = env.state
 
-            action, value, log_prob = env.choose_action(data, edge, self.model)
+            edge_index = coo_matrix(env.edge_matrix)
+            edge_index = np.array([edge_index.row, edge_index.col])
+            data = torch.tensor(data, dtype=torch.float32).to(device)
+            edge_index = torch.tensor(edge_index.astype("int64")).to(device)
+            candidate = torch.tensor(env.candidate.copy().astype("int64")).to(device)
+            data = Data(x=data, edge_index=edge_index, num_nodes=len(data))
+
+            action, value, log_prob = self.choose_action(data, candidate, env)
 
             done, reward = env.step(action, step)
-            self.buffer.buffer_list[i].add_data(data, edge, action, reward, done, value, log_prob)
-        buffer.value_list.append(torch.tensor([0]).view(1, 1).to(device))
+            self.buffer.buffer_list[i].add_data(data, action, reward, done, value, log_prob, candidate)
+            if done:
+                break
+
+        if done:
+            buffer.value_list.append(torch.tensor([0]).view(1, 1).to(device))
+        else:
+            data = env.state
+            edge_index = coo_matrix(env.edge_matrix)
+            edge_index = np.array([edge_index.row, edge_index.col])
+            data = torch.tensor(data, dtype=torch.float32).to(device)
+            edge_index = torch.tensor(edge_index.astype("int64")).to(device)
+
+            data = Data(x=data, edge_index=edge_index, num_nodes=len(data))
+            _, value, _ = self.model(data)
+            buffer.value_list.append(value.view(1, 1).detach().to(device))
         buffer.compute_reward_to_go_returns_adv()
         self.sum_reward.append(sum(buffer.reward_list))
+
+    def choose_action(self, data, candidate, env):
+
+        prob, value, log_probs = self.model(data, candidate)
+
+        mask = (env.action_mask < self.machines)
+        mask = torch.from_numpy(mask).to(device).view(1, -1)
+        # 将无效动作对应的概率值设置为0
+        masked_probs = prob * mask
+
+        # 将有效动作的概率值归一化
+        valid_probs = masked_probs / masked_probs.sum(dim=1)
+
+        policy_head = Categorical(probs=valid_probs.view(1, -1))
+
+        action = policy_head.sample()
+        # action = torch.argmax(valid_probs, dim=1)
+
+        # log_prob = log_probs.view(self.jobs,)[action]
+
+        return action.item(), value, policy_head.log_prob(action)
 
     def save_model(self, file_name):
         # torch.save(self.model.actor.state_dict(), f'./net/params/actor.pth')

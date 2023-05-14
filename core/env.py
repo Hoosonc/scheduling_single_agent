@@ -27,6 +27,8 @@ class Environment:
         self.p_sc_list = None
         self.d_sc_list = None
         self.action_mask = None
+        self.candidate = None
+        self.random_sort = None
         self.p_last_schedule = None
         self.d_position = None
         self.d_total_idle_time = None
@@ -58,7 +60,10 @@ class Environment:
 
     def reset(self):
         torch.manual_seed(random.randint(1000, 5000))
+        self.random_sort = []
+        self.candidate = np.zeros((self.jobs,))
         self.init_edge_matrix()
+
         self.state = self.all_job_list.copy()
         self.state = np.concatenate([self.state, np.ones((self.state.shape[0], 1))], axis=1)  # 添加“是否处理”
         self.state = np.concatenate([self.state, np.zeros((self.state.shape[0], 1))], axis=1)  # add “开始时间”
@@ -94,11 +99,11 @@ class Environment:
         if self.action_mask[action] == self.machines:
             pass
         else:
-            pid = int(self.state[int(action * self.machines + self.action_mask[action]), 0])
-            did = int(self.state[int(action * self.machines + self.action_mask[action]), 1])
+            pid = action
+            did = self.random_sort[action][int(self.action_mask[action])]
             last_schedule_list = self.p_last_schedule
-            process_id = int(action * self.machines + self.action_mask[action])
-            pro_time = self.state[int(action * self.machines + self.action_mask[action]), 2]
+            process_id = int(action * self.machines + did)
+            pro_time = self.state[process_id, 2]
             insert_data = self.find_position(pid, did, process_id, pro_time)
             if self.d_position[did] == 0:
                 d_last_time = 0
@@ -164,9 +169,14 @@ class Environment:
         return self.done, reward
 
     def update_states(self, start_time, pid, did, process_id):
+
         self.state[process_id, 3] = 0
         self.state[process_id, 4] = start_time
         self.action_mask[pid] += 1
+        if self.action_mask[pid] == self.machines:
+            pass
+        else:
+            self.candidate[pid] = pid * self.machines + self.random_sort[pid][int(self.action_mask[pid])]
 
     # def get_total_time(self):
     #     total_time = 0
@@ -177,7 +187,9 @@ class Environment:
     def init_edge_matrix(self):
         self.edge_matrix = np.eye(self.jobs * self.machines, dtype="int64")
         for job_idx in range(self.jobs):
-            random_process = np.random.choice(a=self.machines, size=self.machines)
+            random_process = np.random.choice(a=self.machines, size=self.machines, replace=False)
+            self.random_sort.append(random_process)
+            self.candidate[job_idx] = job_idx * self.machines + random_process[0]
             for i in range(self.machines):
                 if i != 0:
                     self.edge_matrix[

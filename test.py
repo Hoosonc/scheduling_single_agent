@@ -41,5 +41,9 @@ def transition_time():
 
 
 if __name__ == '__main__':
-    arr = np.arange(10)
-    print(arr)
+    input = torch.randn(10, 5).view(1, 10, 5)
+    print(input)
+    idx = torch.tensor([[1, 3, 2], [0, 4, 1], [2, 3, 1], [4, 0, 2], [3, 1, 0]]).view(1, 5, 3)
+
+    output = torch.gather(input, dim=1, index=idx)
+    print(output)
