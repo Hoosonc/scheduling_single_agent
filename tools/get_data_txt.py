@@ -7,6 +7,21 @@ import numpy as np
 import pandas as pd
 
 
+def get_data_csv(path):
+    df = pd.read_csv(path)
+    df = df.sort_values("pid")
+
+    max_time_op = 0
+    sum_op = df["pro_time"].sum()
+    jobs = df.groupby("pid").count().shape[0]
+
+    machines = df.groupby("did").count().shape[0]
+    jobs_length = np.zeros(machines, dtype=int)
+    for m in df.groupby('did'):
+        jobs_length[m[0]] = m[1]["pro_time"].sum()
+    return df.values, jobs, machines, max_time_op, jobs_length, sum_op
+
+
 def get_data(path):
     instance_file = open(path, "r")
     line_str = instance_file.readline()
@@ -49,4 +64,5 @@ def get_data(path):
 
 
 if __name__ == '__main__':
-    get_data("../data/instances/ta01")
+    # get_data("../data/instances/ta01")
+    get_data_csv("../data/10_60_78.csv")

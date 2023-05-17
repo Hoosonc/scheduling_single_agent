@@ -28,7 +28,7 @@ class GCN(torch.nn.Module):
         self.jobs = jobs
         self.machines = machines
 
-        self.conv1 = GATConv(in_channels=5, out_channels=16, heads=2)
+        self.conv1 = GATConv(in_channels=3, out_channels=16, heads=2)
         self.Norm1 = nn.BatchNorm1d(32)
 
         self.conv2 = GATConv(in_channels=32, out_channels=32, heads=2)

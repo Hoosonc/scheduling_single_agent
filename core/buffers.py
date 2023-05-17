@@ -160,16 +160,20 @@ class BatchBuffer:
         mini_buffer = [Buffer(self.gamma, self.lam) for _ in range(update_num)]
         t_list = []
         for i in range(update_num):
-            t = Thread(target=self.get_batch, args=(mini_buffer[i], mini_size))
+            t = Thread(target=self.get_batch, args=(mini_buffer[i], mini_size, i))
             t.start()
             t_list.append(t)
         for thread in t_list:
             thread.join()
         return mini_buffer
 
-    def get_batch(self, buf, mini_size):
-
-        select_index = np.random.choice(a=len(self.states), size=mini_size, replace=False, p=None)
+    def get_batch(self, buf, mini_size, idx):
+        assert (idx*mini_size) < len(self.states)
+        if ((idx+1)*mini_size) >= len(self.states):
+            select_index = np.arange(start=(idx*mini_size), stop=len(self.states))
+        else:
+            select_index = np.arange(start=(idx*mini_size), stop=(idx+1)*mini_size)
+        # select_index = np.random.choice(a=len(self.states), size=mini_size, replace=False, p=None)
         # buf.state_list = self.states[select_index]
         # buf.edge_list = self.edges[select_index]
         for index in select_index:

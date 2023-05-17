@@ -154,7 +154,7 @@ class Environment:
             if last_schedule_list[0][pid] != 0:
                 patient_idle_time = self.cal_p_idle(pid)
 
-                reward += (patient_idle_time - self.p_total_idle_time[pid])
+                # reward += (patient_idle_time - self.p_total_idle_time[pid])
                 self.p_total_idle_time[pid] = patient_idle_time
                 total_idle_time_p = np.sum(self.p_total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
@@ -187,7 +187,8 @@ class Environment:
     def init_edge_matrix(self):
         self.edge_matrix = np.eye(self.jobs * self.machines, dtype="int64")
         for job_idx in range(self.jobs):
-            random_process = np.random.choice(a=self.machines, size=self.machines, replace=False)
+            # random_process = np.random.choice(a=self.machines, size=self.machines, replace=False)
+            random_process = np.arange(self.machines)
             self.random_sort.append(random_process)
             self.candidate[job_idx] = job_idx * self.machines + random_process[0]
             for i in range(self.machines):

@@ -68,8 +68,14 @@ class Trainer:
                 t_list.append(t)
             for thread in t_list:
                 thread.join()
-
+            max_len = 0
+            min_len = 999999
             for env in self.envs:
+                for d_sc in env.d_sc_list:
+                    sc = np.array(d_sc)
+                    final_len = sc[:, 4].max()
+                    max_len = max(final_len, max_len)
+                    min_len = min(final_len, min_len)
                 # p_idle = np.sum(env.patients.total_idle_time)
                 # d_idle = np.sum(env.doctor.total_idle_time)
                 # total_idle_time = int(p_idle + d_idle)
@@ -106,16 +112,17 @@ class Trainer:
 
             self.r_l.append([np.mean(self.sum_reward), loss.item(), episode])
 
-            self.scheduler.step()
+            # self.scheduler.step()
 
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())
             if episode % 1 == 0:
                 print("loss:", loss.item())
+                print("max:", max_len)
                 print("mean_reward:", np.mean(self.sum_reward), episode)
-            if episode % 120 == 0:
+            if episode % 100 == 0:
                 self.episode = episode
-                # self.save_model(self.model_name)
+                self.save_model(self.model_name)
                 # self.save_info(self.r_l, f"r_l_{self.model_name}",
                 #                ['reward', 'loss', 'ep'], "r_l")
                 # self.save_info(self.idle_total, f"i_t_{self.model_name}",
@@ -127,7 +134,7 @@ class Trainer:
         buffer = self.buffer.buffer_list[i]
         done = False
         for step in range(self.jobs * self.machines * 5):
-            data = env.state
+            data = env.state[:, 2:]
 
             edge_index = coo_matrix(env.edge_matrix)
             edge_index = np.array([edge_index.row, edge_index.col])
@@ -172,8 +179,8 @@ class Trainer:
 
         policy_head = Categorical(probs=valid_probs.view(1, -1))
 
-        action = policy_head.sample()
-        # action = torch.argmax(valid_probs, dim=1)
+        # action = policy_head.sample()
+        action = torch.argmax(valid_probs, dim=1)
 
         # log_prob = log_probs.view(self.jobs,)[action]
 
