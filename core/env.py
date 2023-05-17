@@ -11,7 +11,7 @@ import numpy as np
 import torch
 # import torch.nn.functional as f
 import pandas as pd
-from tools.get_data_txt import get_data
+from tools.get_data_txt import get_data, get_data_csv
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -20,8 +20,11 @@ class Environment:
     def __init__(self, args):
         # init origin attributes
         self.args = args
+        # (self.all_job_list, self.jobs, self.machines,
+        #  self.max_time_op, self.jobs_length, self.sum_op) = get_data(args.reg_path)
         (self.all_job_list, self.jobs, self.machines,
-         self.max_time_op, self.jobs_length, self.sum_op) = get_data(args.reg_path)
+         self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(args.reg_path)
+        self.reg_num = self.all_job_list.shape[0]
         self.edge_matrix = None
         self.state = None
         self.p_sc_list = None
@@ -41,9 +44,6 @@ class Environment:
         self.total_idle_time_p = 0.
         self.render_data = []
         self.color = []
-        self.start_nodes = []
-        self.directed_edges = []
-        self.done_node = []
         self.d_total_time = 0
         self.p_total_time = 0
         self.p_s_f = None
@@ -56,12 +56,13 @@ class Environment:
         self.d_tasks = None
         self.p_tasks = None
         self.tasks = None
+        self.reward = None
         self.idle_total = []
 
     def reset(self):
         torch.manual_seed(random.randint(1000, 5000))
         self.random_sort = []
-        self.candidate = np.zeros((self.jobs,))
+        self.candidate = np.zeros((self.machines,))
         self.init_edge_matrix()
 
         self.state = self.all_job_list.copy()
@@ -69,7 +70,7 @@ class Environment:
         self.state = np.concatenate([self.state, np.zeros((self.state.shape[0], 1))], axis=1)  # add “开始时间”
         # add a column 'id'
         # self.state = np.concatenate([self.state, np.arange(self.state.shape[0]).reshape(-1, 1)], axis=1)
-        self.action_mask = np.zeros((self.jobs,))
+        self.action_mask = self.d_reg_num.copy()
         self.p_last_schedule = np.zeros((2, self.jobs))  # 上一个号的结束时间
         """
              [[已处理号数]
@@ -85,31 +86,32 @@ class Environment:
         self.p_s_f = np.zeros((2, self.jobs))
 
         self.done = False
-        self.done_node = []
 
         self.hole_total_time = 0
 
         self.d_tasks = [[] for _ in range(self.machines)]
         self.p_tasks = [[] for _ in range(self.jobs)]
         self.tasks = []
+        self.reward = 0.
         self.idle_total = []
 
     def step(self, action, step):
         reward = 0.
-        if self.action_mask[action] == self.machines:
+        if self.action_mask[action] == 0:
             pass
         else:
-            pid = action
-            did = self.random_sort[action][int(self.action_mask[action])]
+            did = action
+            process_id = self.random_sort[action][int(self.action_mask[action])]
+            pid = self.state[process_id, 0]
             last_schedule_list = self.p_last_schedule
-            process_id = int(action * self.machines + did)
+
             pro_time = self.state[process_id, 2]
             insert_data = self.find_position(pid, did, process_id, pro_time)
             if self.d_position[did] == 0:
                 d_last_time = 0
             else:
-                prev_process = self.d_sc_list[-1][6]
-                self.edge_matrix[prev_process][process_id] = 1
+                # prev_process = self.d_sc_list[-1][6]
+                # self.edge_matrix[prev_process][process_id] = 1
                 sc_d = pd.DataFrame(np.array(self.d_sc_list[did]),
                                     columns=['did', 'pid', 'start_time', 'pro_time', 'finish_time',
                                              "step", "job_id"]).sort_values("start_time").values
@@ -160,23 +162,24 @@ class Environment:
                 self.total_idle_time_p = total_idle_time_p
 
             reward = 1 - reward/self.jobs_length.max()
+            self.reward += reward
 
             self.update_states(insert_data[2], pid, did, process_id)
         # print(reward)
         if sum(self.state[:, 3]) == 0:
             self.done = True
 
-        return self.done, reward
+        return self.done, self.reward
 
     def update_states(self, start_time, pid, did, process_id):
 
         self.state[process_id, 3] = 0
         self.state[process_id, 4] = start_time
-        self.action_mask[pid] += 1
-        if self.action_mask[pid] == self.machines:
+        self.action_mask[did] -= 1
+        if self.action_mask[did] == 0:
             pass
         else:
-            self.candidate[pid] = pid * self.machines + self.random_sort[pid][int(self.action_mask[pid])]
+            self.candidate[did] = self.random_sort[did][int(self.action_mask[did])]
 
     # def get_total_time(self):
     #     total_time = 0
@@ -185,17 +188,15 @@ class Environment:
     #     return total_time
 
     def init_edge_matrix(self):
-        self.edge_matrix = np.eye(self.jobs * self.machines, dtype="int64")
-        for job_idx in range(self.jobs):
+        self.edge_matrix = np.eye(self.reg_num, dtype="int64")
+        for m_idx in range(self.machines):
             # random_process = np.random.choice(a=self.machines, size=self.machines, replace=False)
-            random_process = np.arange(self.machines)
+            random_process = self.all_job_list[self.all_job_list[:, 1] == m_idx][:, 4]
             self.random_sort.append(random_process)
-            self.candidate[job_idx] = job_idx * self.machines + random_process[0]
+            self.candidate[m_idx] = random_process[0]
             for i in range(self.machines):
                 if i != 0:
-                    self.edge_matrix[
-                        job_idx * self.machines + random_process[i - 1]][
-                        job_idx * self.machines + random_process[i]] = 1
+                    self.edge_matrix[random_process[i - 1]][random_process[i]] = 1
 
     def cal_hole(self, did):
         hole_total_time = 0
@@ -241,6 +242,7 @@ class Environment:
         holes = self.find_idle_times(pro_time)
         if holes:
             insert_data = [did, pid, holes[0][0], pro_time, holes[0][0] + pro_time]
+
         else:
             if last_time <= last_schedule_list[1][pid]:
                 insert_data = [did, pid, last_schedule_list[1][pid], pro_time, last_schedule_list[1][pid] + pro_time]

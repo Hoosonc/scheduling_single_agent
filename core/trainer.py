@@ -37,7 +37,7 @@ class Trainer:
             env.reset()
         self.jobs = self.envs[0].jobs
         self.machines = self.envs[0].machines
-        self.model = GCN(self.jobs, self.machines).to(device)
+        self.model = GCN(self.machines, self.machines).to(device)
 
         self.ppo = PPOClip(self.model, device, args)
         self.total_time = 0
@@ -69,15 +69,16 @@ class Trainer:
             for thread in t_list:
                 thread.join()
             max_len = 0
-            min_len = 999999
+            # min_len = 999999
             for env in self.envs:
-                for d_sc in env.d_sc_list:
-                    sc = np.array(d_sc)
-                    final_len = sc[:, 4].max()
-                    max_len = max(final_len, max_len)
-                    min_len = min(final_len, min_len)
+                # for d_sc in env.d_sc_list:
+                #     sc = np.array(d_sc)
+                #     final_len = sc[:, 4].max()
+                #     max_len = max(final_len, max_len)
+                #     min_len = min(final_len, min_len)
                 # p_idle = np.sum(env.patients.total_idle_time)
-                # d_idle = np.sum(env.doctor.total_idle_time)
+                d_idle = np.sum(env.d_total_idle_time)
+                max_len = max(d_idle, max_len)
                 # total_idle_time = int(p_idle + d_idle)
                 # total_time = env.d_total_time + env.p_total_time
                 # self.idle_total.append([d_idle, p_idle, total_idle_time,

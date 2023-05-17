@@ -10,16 +10,18 @@ import pandas as pd
 def get_data_csv(path):
     df = pd.read_csv(path)
     df = df.sort_values("pid")
-
+    df["id"] = [i for i in range(df.shape[0])]
     max_time_op = 0
     sum_op = df["pro_time"].sum()
     jobs = df.groupby("pid").count().shape[0]
 
     machines = df.groupby("did").count().shape[0]
     jobs_length = np.zeros(machines, dtype=int)
+    d_reg_num = np.zeros(machines, dtype=int)
     for m in df.groupby('did'):
         jobs_length[m[0]] = m[1]["pro_time"].sum()
-    return df.values, jobs, machines, max_time_op, jobs_length, sum_op
+        d_reg_num[m[0]] = m[1].groupby("pid").count().shape[0]
+    return df.values, jobs, machines, max_time_op, jobs_length, sum_op, d_reg_num
 
 
 def get_data(path):
