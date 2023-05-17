@@ -13,7 +13,7 @@ class Params:
         self.args = self.parser.parse_args()
 
     def get_parser(self):
-        self.parser.add_argument('--lr_v', type=float, default=0.000025,
+        self.parser.add_argument('--lr_v', type=float, default=0.0025,
                                  help='learning rate (default: 0.0001)')
         self.parser.add_argument('--epsilon', type=float, default=0.25,
                                  help='epsilon (default: 0.3)')
@@ -33,15 +33,15 @@ class Params:
                                  help='number of forward steps in A2C (default: 300)')
         self.parser.add_argument('--max-steps', type=int, default=78,
                                  help='maximum length of an episode (default: 1)')
-        self.parser.add_argument('--update_num', type=int, default=3,
+        self.parser.add_argument('--update_num', type=int, default=4,
                                  help='')
-        self.parser.add_argument('--env_num', type=int, default=3,
+        self.parser.add_argument('--env_num', type=int, default=1,
                                  help='')
-        self.parser.add_argument('--mini_size', type=int, default=256,
+        self.parser.add_argument('--mini_size', type=int, default=35,
                                  help='')
         self.parser.add_argument('--episode', type=int, default=10000,
                                  help='How many episode to train the RL algorithm')
-        self.parser.add_argument('--reg-path', type=str, default='./data/10_120_140',
+        self.parser.add_argument('--reg-path', type=str, default='./data/10_120_140.csv',
                                  help='The path of Reg file')
         self.parser.add_argument('--doc-path', type=str, default='./data/doc.csv',
                                  help='The path of doc file')

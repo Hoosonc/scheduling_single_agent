@@ -135,7 +135,7 @@ class Trainer:
         buffer = self.buffer.buffer_list[i]
         done = False
         for step in range(self.jobs * self.machines * 5):
-            data = env.state[:, 2:]
+            data = env.state[:, [0, 2, 4, 5]]
 
             edge_index = coo_matrix(env.edge_matrix)
             edge_index = np.array([edge_index.row, edge_index.col])
@@ -164,13 +164,13 @@ class Trainer:
             _, value, _ = self.model(data)
             buffer.value_list.append(value.view(1, 1).detach().to(device))
         buffer.compute_reward_to_go_returns_adv()
-        self.sum_reward.append(sum(buffer.reward_list))
+        self.sum_reward.append(buffer.reward_list[-1])
 
     def choose_action(self, data, candidate, env):
 
         prob, value, log_probs = self.model(data, candidate)
 
-        mask = (env.action_mask < self.machines)
+        mask = (env.action_mask != 0)
         mask = torch.from_numpy(mask).to(device).view(1, -1)
         # 将无效动作对应的概率值设置为0
         masked_probs = prob * mask

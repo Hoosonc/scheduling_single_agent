@@ -92,7 +92,7 @@ class Environment:
         self.d_tasks = [[] for _ in range(self.machines)]
         self.p_tasks = [[] for _ in range(self.jobs)]
         self.tasks = []
-        self.reward = 0.
+        self.reward = 1.
         self.idle_total = []
 
     def step(self, action, step):
@@ -101,8 +101,8 @@ class Environment:
             pass
         else:
             did = action
-            process_id = self.random_sort[action][int(self.action_mask[action])]
-            pid = self.state[process_id, 0]
+            process_id = self.random_sort[action][self.d_reg_num[action] - int(self.action_mask[action])]
+            pid = int(self.state[process_id, 0])
             last_schedule_list = self.p_last_schedule
 
             pro_time = self.state[process_id, 2]
@@ -154,6 +154,14 @@ class Environment:
                                         insert_data[4], insert_data[6]])
             last_schedule_list[0][pid] += 1
             if last_schedule_list[0][pid] != 0:
+                if last_schedule_list[0][pid] == 1:
+                    pass
+                else:
+
+                    prev_process = self.p_sc_list[pid][-1][3]
+
+                    self.edge_matrix[prev_process][process_id] = 1
+
                 patient_idle_time = self.cal_p_idle(pid)
 
                 # reward += (patient_idle_time - self.p_total_idle_time[pid])
@@ -161,8 +169,8 @@ class Environment:
                 total_idle_time_p = np.sum(self.p_total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
 
-            reward = 1 - reward/self.jobs_length.max()
-            self.reward += reward
+            reward = reward/self.jobs_length.max()
+            self.reward -= reward
 
             self.update_states(insert_data[2], pid, did, process_id)
         # print(reward)
@@ -188,15 +196,16 @@ class Environment:
     #     return total_time
 
     def init_edge_matrix(self):
-        self.edge_matrix = np.eye(self.reg_num, dtype="int64")
+        self.edge_matrix = np.eye(self.reg_num, dtype="int64") + np.eye(self.reg_num, dtype="int64", k=1)
+        n = 0
         for m_idx in range(self.machines):
             # random_process = np.random.choice(a=self.machines, size=self.machines, replace=False)
-            random_process = self.all_job_list[self.all_job_list[:, 1] == m_idx][:, 4]
+            random_process = self.all_job_list[self.all_job_list[:, 1] == m_idx][:, 3]
             self.random_sort.append(random_process)
             self.candidate[m_idx] = random_process[0]
-            for i in range(self.machines):
-                if i != 0:
-                    self.edge_matrix[random_process[i - 1]][random_process[i]] = 1
+            if n != 0:
+                self.edge_matrix[n-1, n] = 0
+            n += len(random_process)
 
     def cal_hole(self, did):
         hole_total_time = 0

@@ -9,7 +9,7 @@ import pandas as pd
 
 def get_data_csv(path):
     df = pd.read_csv(path)
-    df = df.sort_values("pid")
+    df = df.sort_values("did")
     df["id"] = [i for i in range(df.shape[0])]
     max_time_op = 0
     sum_op = df["pro_time"].sum()
