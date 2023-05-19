@@ -11,7 +11,7 @@ import numpy as np
 import torch
 # import torch.nn.functional as f
 import pandas as pd
-from tools.get_data_txt import get_data, get_data_csv
+from tools.get_data_txt import get_data_txt, get_data_csv
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -21,7 +21,7 @@ class Environment:
         # init origin attributes
         self.args = args
         # (self.all_job_list, self.jobs, self.machines,
-        #  self.max_time_op, self.jobs_length, self.sum_op) = get_data(args.reg_path)
+        #  self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_txt(args.reg_path)
         (self.all_job_list, self.jobs, self.machines,
          self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(args.reg_path)
         self.reg_num = self.all_job_list.shape[0]

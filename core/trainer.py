@@ -113,7 +113,7 @@ class Trainer:
 
             self.r_l.append([np.mean(self.sum_reward), loss.item(), episode])
 
-            # self.scheduler.step()
+            self.scheduler.step()
 
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())

@@ -34,22 +34,26 @@ class GCN(torch.nn.Module):
         self.conv2 = GATConv(in_channels=32, out_channels=32, heads=2)
         self.Norm2 = nn.BatchNorm1d(64)
 
-        # self.conv3 = GATConv(in_channels=20, out_channels=5, heads=2)
-        # self.Norm3 = nn.BatchNorm1d(20)
+        self.conv3 = GATConv(in_channels=64, out_channels=1, heads=1)
+        self.Norm3 = nn.BatchNorm1d(1)
 
-        self.L1 = nn.Sequential(
+        self.actor = nn.Sequential(
             Linear(128, 64),
-            nn.ReLU(),
+            nn.Dropout(),
+            # nn.ReLU(),
             # nn.BatchNorm1d(64),
             Linear(64, 32),
+            nn.Dropout(),
             # nn.BatchNorm1d(32),
             Linear(32, 1)
         )
         self.critic = nn.Sequential(
             Linear(64, 32),
-            nn.ReLU(),
+            nn.Dropout(),
+            # nn.ReLU(),
             # nn.BatchNorm1d(32),
             Linear(32, 16),
+            nn.Dropout(),
             # nn.ReLU(),
             # nn.BatchNorm1d(16),
             Linear(16, 1)
@@ -68,13 +72,15 @@ class GCN(torch.nn.Module):
         # x = f.dropout(x, training=True)
         pooled_x = global_mean_pool(x, None)
 
-        dummy = candidate.view(1, -1, 1).expand(-1, self.jobs, x.size(-1))
-        candidate_feature = torch.gather(x.reshape(dummy.size(0), -1, dummy.size(-1)), 1, dummy)
-        h_pooled_repeated = pooled_x.unsqueeze(1).expand_as(candidate_feature)
-        concateFea = torch.cat((candidate_feature, h_pooled_repeated), dim=-1)
+        # dummy = candidate.view(1, -1, 1).expand(-1, self.jobs, x.size(-1))
+        # candidate_feature = torch.gather(x.reshape(dummy.size(0), -1, dummy.size(-1)), 1, dummy)
+        # h_pooled_repeated = pooled_x.unsqueeze(1).expand_as(candidate_feature)
+        # concateFea = torch.cat((candidate_feature, h_pooled_repeated), dim=-1)
+        actor = self.Norm3(self.conv3(x, data.edge_index))
 
         value = self.critic(pooled_x).view(1, 1)
-        logits = torch.tanh(self.L1(concateFea)).view(1, -1)
+        # logits = torch.tanh(self.actor(concateFea)).view(1, -1)
+        logits = torch.tanh(actor).view(1, -1)
         prob = f.softmax(logits, dim=1)
         log_prob = f.log_softmax(logits, dim=1)
 
