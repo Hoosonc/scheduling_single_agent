@@ -137,17 +137,21 @@ class Trainer:
         for step in range(self.jobs * self.machines * 5):
             data = env.state[:, [0, 2, 4, 5]]
 
-            edge_index = coo_matrix(env.edge_matrix)
-            edge_index = np.array([edge_index.row, edge_index.col])
+            m_edge_index = coo_matrix(env.m_edge_matrix)
+            m_edge_index = np.array([m_edge_index.row, m_edge_index.col])
+            np.fill_diagonal(env.j_edge_matrix, 0)
+            j_edge_index = coo_matrix(env.j_edge_matrix)
+            j_edge_index = np.array([j_edge_index.row, j_edge_index.col])
+            edge_index = np.concatenate([m_edge_index, j_edge_index], axis=1)
             data = torch.tensor(data, dtype=torch.float32).to(device)
             edge_index = torch.tensor(edge_index.astype("int64")).to(device)
-            candidate = torch.tensor(env.candidate.copy().astype("int64")).to(device)
+            # candidate = torch.tensor(env.candidate.copy().astype("int64")).to(device)
             data = Data(x=data, edge_index=edge_index, num_nodes=len(data))
 
-            action, value, log_prob = self.choose_action(data, candidate, env)
+            action, value, log_prob = self.choose_action(data, env)
 
             done, reward = env.step(action, step)
-            self.buffer.buffer_list[i].add_data(data, action, reward, done, value, log_prob, candidate)
+            self.buffer.buffer_list[i].add_data(data, action, reward, done, value, log_prob)
             if done:
                 break
 
@@ -166,11 +170,11 @@ class Trainer:
         buffer.compute_reward_to_go_returns_adv()
         self.sum_reward.append(buffer.reward_list[-1])
 
-    def choose_action(self, data, candidate, env):
+    def choose_action(self, data, env):
 
-        prob, value, log_probs = self.model(data, candidate)
+        prob, value, log_probs = self.model(data)
 
-        mask = (env.action_mask != 0)
+        mask = (env.state[:, 4] != 0)
         mask = torch.from_numpy(mask).to(device).view(1, -1)
         # 将无效动作对应的概率值设置为0
         masked_probs = prob * mask

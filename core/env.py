@@ -25,11 +25,12 @@ class Environment:
         (self.all_job_list, self.jobs, self.machines,
          self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(args.reg_path)
         self.reg_num = self.all_job_list.shape[0]
-        self.edge_matrix = None
+        self.j_edge_matrix = None
+        self.m_edge_matrix = None
         self.state = None
         self.p_sc_list = None
         self.d_sc_list = None
-        self.action_mask = None
+
         self.candidate = None
         self.random_sort = None
         self.p_last_schedule = None
@@ -63,14 +64,16 @@ class Environment:
         torch.manual_seed(random.randint(1000, 5000))
         self.random_sort = []
         self.candidate = np.zeros((self.machines,))
-        self.init_edge_matrix()
 
         self.state = self.all_job_list.copy()
         self.state = np.concatenate([self.state, np.ones((self.state.shape[0], 1))], axis=1)  # 添加“是否处理”
-        self.state = np.concatenate([self.state, np.zeros((self.state.shape[0], 1))], axis=1)  # add “开始时间”
+        self.state = np.concatenate([self.state, np.zeros((self.state.shape[0], 2))], axis=1)  # add “开始时间” 和 ”最早开始时间“
+        self.j_edge_matrix = np.eye(self.reg_num, dtype="int64")
+        self.m_edge_matrix = np.eye(self.reg_num, dtype="int64")
+        self.init_edge_matrix()
         # add a column 'id'
         # self.state = np.concatenate([self.state, np.arange(self.state.shape[0]).reshape(-1, 1)], axis=1)
-        self.action_mask = self.d_reg_num.copy()
+
         self.p_last_schedule = np.zeros((2, self.jobs))  # 上一个号的结束时间
         """
              [[已处理号数]
@@ -97,11 +100,12 @@ class Environment:
 
     def step(self, action, step):
         reward = 0.
-        if self.action_mask[action] == 0:
+        if self.state[action][4] == 0:
             pass
         else:
-            did = action
-            process_id = self.random_sort[action][self.d_reg_num[action] - int(self.action_mask[action])]
+
+            process_id = action
+            did = int(self.state[action, 1])
             pid = int(self.state[process_id, 0])
             last_schedule_list = self.p_last_schedule
 
@@ -154,17 +158,10 @@ class Environment:
                                         insert_data[4], insert_data[6]])
             last_schedule_list[0][pid] += 1
             if last_schedule_list[0][pid] != 0:
-                if last_schedule_list[0][pid] == 1:
-                    pass
-                else:
-
-                    prev_process = self.p_sc_list[pid][-1][3]
-
-                    self.edge_matrix[prev_process][process_id] = 1
 
                 patient_idle_time = self.cal_p_idle(pid)
 
-                # reward += (patient_idle_time - self.p_total_idle_time[pid])
+                reward += (patient_idle_time - self.p_total_idle_time[pid])
                 self.p_total_idle_time[pid] = patient_idle_time
                 total_idle_time_p = np.sum(self.p_total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
@@ -181,31 +178,57 @@ class Environment:
 
     def update_states(self, start_time, pid, did, process_id):
 
-        self.state[process_id, 3] = 0
-        self.state[process_id, 4] = start_time
-        self.action_mask[did] -= 1
-        if self.action_mask[did] == 0:
-            pass
-        else:
-            self.candidate[did] = self.random_sort[did][int(self.action_mask[did])]
+        self.state[process_id, 4] = 0
+        self.state[process_id, 5] = start_time
+        self.state[process_id, 6] = start_time
+        idx_list = []
+        temp_state = self.state[self.state[:, 4] == 1]
+        idx_list.extend(temp_state[temp_state[:, 1] == did][:, 3].tolist())
+        idx_list.extend(temp_state[temp_state[:, 0] == pid][:, 3].tolist())
+        idx_list = list(set(idx_list))
+        for idx in idx_list:
+            insert_data = self.find_position(pid, did, int(idx), self.state[int(idx), 2])
+            self.state[int(idx), 6] = insert_data[2]
+        self.get_edge(pid, 0)
+        self.get_edge(did, 1)
+        # self.action_mask[did] -= 1
+        # if self.action_mask[did] == 0:
+        #     pass
+        # else:
+        #     self.candidate[did] = self.random_sort[did][int(self.action_mask[did])]
 
     # def get_total_time(self):
     #     total_time = 0
     #     for i in range(self.doctor.player_num):
     #         total_time += self.doctor.schedule_list[i][int(self.doctor.free_pos[i] - 1)][3]
     #     return total_time
+    def get_edge(self, idx, col):
+        temp_mtx = self.state[self.state[:, col] == idx].copy()
+        earliest_start_times = np.unique(temp_mtx[:, 6])
+        job_id_list = temp_mtx[:, 3].astype("int64")
+        if col == 0:
+            edge_mtx = self.j_edge_matrix
+        else:
+            edge_mtx = self.m_edge_matrix
+        edge_mtx[job_id_list, :] = 0
+        if len(earliest_start_times) == 1:
+            # 生成所有可能的组合
+            grid = np.meshgrid(job_id_list, job_id_list)
+            combinations = np.vstack(grid).reshape(2, -1).T.astype("int64")
+            edge_mtx[combinations[:, 0], combinations[:, 1]] = 1
+        else:
+            for i in range(1, len(earliest_start_times)):
+                prev_job_list = temp_mtx[temp_mtx[:, 6] == earliest_start_times[i - 1]][:, 3]
+                curr_job_list = temp_mtx[temp_mtx[:, 6] == earliest_start_times[i]][:, 3]
+                grid = np.meshgrid(prev_job_list, curr_job_list)
+                combinations = np.vstack(grid).reshape(2, -1).T.astype("int64")
+                edge_mtx[combinations[:, 0], combinations[:, 1]] = 1
 
     def init_edge_matrix(self):
-        self.edge_matrix = np.eye(self.reg_num, dtype="int64") + np.eye(self.reg_num, dtype="int64", k=1)
-        n = 0
         for m_idx in range(self.machines):
-            # random_process = np.random.choice(a=self.machines, size=self.machines, replace=False)
-            random_process = self.all_job_list[self.all_job_list[:, 1] == m_idx][:, 3]
-            self.random_sort.append(random_process)
-            self.candidate[m_idx] = random_process[0]
-            if n != 0:
-                self.edge_matrix[n-1, n] = 0
-            n += len(random_process)
+            self.get_edge(m_idx, 1)
+        for j_idx in range(self.jobs):
+            self.get_edge(j_idx, 0)
 
     def cal_hole(self, did):
         hole_total_time = 0

@@ -37,16 +37,16 @@ class GCN(torch.nn.Module):
         self.conv3 = GATConv(in_channels=64, out_channels=1, heads=1)
         self.Norm3 = nn.BatchNorm1d(1)
 
-        self.actor = nn.Sequential(
-            Linear(128, 64),
-            nn.Dropout(),
-            # nn.ReLU(),
-            # nn.BatchNorm1d(64),
-            Linear(64, 32),
-            nn.Dropout(),
-            # nn.BatchNorm1d(32),
-            Linear(32, 1)
-        )
+        # self.actor = nn.Sequential(
+        #     Linear(128, 64),
+        #     nn.Dropout(),
+        #     # nn.ReLU(),
+        #     # nn.BatchNorm1d(64),
+        #     Linear(64, 32),
+        #     nn.Dropout(),
+        #     # nn.BatchNorm1d(32),
+        #     Linear(32, 1)
+        # )
         self.critic = nn.Sequential(
             Linear(64, 32),
             nn.Dropout(),
@@ -60,7 +60,7 @@ class GCN(torch.nn.Module):
         )
         self.mini_bf_list = [mini_bf() for _ in range(20)]
 
-    def forward(self, data, candidate):
+    def forward(self, data):
 
         x = self.Norm1(self.conv1(data.x, data.edge_index))
         x = f.elu(x)
@@ -120,7 +120,7 @@ class GCN(torch.nn.Module):
 
     def get_forward(self, buf, start, end, bf_nb):
         for i in range(start, end):
-            p, v, log_p = self.forward(buf.state_list[i], buf.candidate_list[i])
+            p, v, log_p = self.forward(buf.state_list[i])
             policy_head = Categorical(probs=p)
             self.mini_bf_list[bf_nb].value_list.append(v)
             self.mini_bf_list[bf_nb].log_prob_list.append(policy_head.log_prob(

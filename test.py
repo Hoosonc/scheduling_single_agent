@@ -41,5 +41,42 @@ def transition_time():
 
 
 if __name__ == '__main__':
-    a = np.arange(start=0, stop=5)
+    data = np.array([[0, 1], [6, 9], [1, 3], [2, 3], [3, 3], [4, 5], [5, 8]])
+    a = np.arange(25).reshape(5, 5)
+    b = np.array([[1, 2], [3, 4], [2, 3]])
+
+    # 创建布尔矩阵mask
+    # mask = np.zeros_like(a, dtype=bool)
+    # mask[b[:, 0], b[:, 1]] = True
+    #
+    # # 使用掩码将a中对应位置置为0
+    # a[mask] = 0
+    a[b[:, 0], b[:, 1]] = 0
     print(a)
+    # arr = np.array([1, 2, 3, 4])
+    # arr1 = np.array([5, 6])
+    # # 生成所有可能的组合
+    # grid = np.meshgrid(arr1, arr)
+
+    # 将结果转换为所需的格式
+    # combinations = np.vstack(grid).reshape(2, -1).T
+    #
+    # print(combinations)
+    # 获取开始时间的唯一值
+    # start_times = np.unique(data[:, 1])  # [1 3 5 8 9]
+    # print(start_times)
+    # # 创建连接矩阵
+    # n = len(start_times)
+    # adj_matrix = np.zeros((7, 7), dtype=int)
+    #
+    # # 将连接关系填充到矩阵中
+    # for i in range(n):
+    #     if i == 0:
+    #
+    #         indices = np.where(data[:, 1] == start_times[i])[0]
+    #         for j in indices:
+    #             adj_matrix[i, np.where(start_times == data[j, 1])] = 1
+    #     else:
+    #
+    #
+    # print(adj_matrix)
