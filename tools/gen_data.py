@@ -12,91 +12,6 @@ import pandas as pd
 # from net.utils import get_now_date as hxc
 
 
-def save_data(header, data, file_name):
-    with open(f'../data/{file_name}.csv', mode='a+', encoding='utf-8-sig', newline='') as f:
-        csv_writer = csv.writer(f)
-        header = header
-        csv_writer.writerow(header)
-        csv_writer.writerows(data)
-        # print(f'保存文件')
-
-
-def gen_doctors():
-    doc_list = []
-    for i in range(5):
-        am = 0
-        pm = 0
-        did = i
-        reg_num_list = [30, 35]
-        op_time1 = [7, 8, 9, 10, 11]
-        # op_time2 = [4, 5, 6, 7]
-        reg_num = np.random.choice(a=reg_num_list, size=1, replace=False, p=None)[0]
-        avg_pro_time = np.random.choice(a=op_time1, size=1, replace=False, p=None)[0]
-        # if reg_num == 8:
-        #     avg_pro_time = np.random.choice(a=op_time1, size=1, replace=False, p=None)[0]
-        # else:
-        #     avg_pro_time = np.random.choice(a=op_time2, size=1, replace=False, p=None)[0]
-        # if am > 6:
-        #     start_time = 1
-        # elif pm > 6:
-        #     start_time = 0
-        # else:
-        #     start_time = np.random.choice(a=[0, 1], size=1, replace=False, p=None)[0]
-        #     if start_time == 0:
-        #         am += 1
-        #     else:
-        #         pm += 1
-
-        doc = [did, reg_num, 0, avg_pro_time]
-        doc_list.append(doc)
-    return doc_list
-
-
-def gen_patient():
-    patient_list = []
-    pid_list = [pid for pid in range(0, 20)]
-    p_reg_num = np.zeros((20,))
-    d_reg_num = np.zeros((5,))
-    d_p = [[] for did in range(5)]
-    doc_file = pd.read_csv("../data/doc_am1.csv", encoding="utf-8-sig")
-    max_num = 3
-
-    while True:
-        if len(patient_list) == 63:
-            break
-        if len(np.where(p_reg_num > 3)[0]) >= 40:
-            max_num = 2
-            up_id = np.where(p_reg_num > 3)[0]
-            for j in up_id:
-                if j in pid_list:
-                    patient_list.remove(j)
-        if len(np.where(p_reg_num > 2)[0]) >= 55:
-            max_num = 1
-            up_id = np.where(p_reg_num > 2)[0]
-            for j in up_id:
-                if j in pid_list:
-                    patient_list.remove(j)
-        for doc in doc_file.values:
-            if d_reg_num[doc[0]] == doc[1]:
-                continue
-            temp_list = pid_list.copy()
-            for i in d_p[doc[0]]:
-                if i in temp_list:
-                    temp_list.remove(i)
-            if not temp_list:
-                continue
-            pid = np.random.choice(a=temp_list, size=1, replace=False, p=None)[0]
-            p = [pid, doc[0], 0, doc[3]]
-            d_p[doc[0]].append(pid)
-            p_reg_num[pid] += 1
-            d_reg_num[doc[0]] += 1
-            patient_list.append(p)
-            if p_reg_num[pid] > max_num:
-                pid_list.remove(pid)
-
-    return patient_list
-
-
 def distance_d(doc_num, file_name):
     dis_arr = np.random.choice(a=[1, 2, 3, 4, 5], size=doc_num*doc_num, replace=True).reshape(doc_num, doc_num)
     dis_arr = np.triu(dis_arr)
@@ -107,40 +22,7 @@ def distance_d(doc_num, file_name):
     dis_arr.to_csv(f"../data/{file_name}.csv", index=False, header=None)
 
 
-def gen_data(p_num, d_num):
-    multi = int(p_num*0.10)
-    data_list = []
-    p_st = np.ones((1, p_num), dtype="int64")
-    multi_reg = np.random.choice(a=p_num, p=None, size=multi, replace=False)
-    multi_reg_2 = np.random.choice(a=len(multi_reg), p=None, size=10, replace=False)
-    p_st[0][multi_reg] = 3
-    p_st[0][multi_reg[multi_reg_2]] = 2
-    d_st = np.zeros((1, d_num), dtype="int64")
-    p_a = [_ for _ in range(p_num)]
-    d_a = [_ for _ in range(d_num)]
-    job_num = 0
-    legal_mask = np.ones((d_num, p_num), dtype=bool)
-    max_job_num = np.sum(p_st[0])
-    # max_job_num = max_job_num - random.randint(0, multi)
-    while job_num < max_job_num:
-        pid = np.random.choice(a=p_a, p=None, size=1)[0]
-        did = np.random.choice(a=d_a, p=None, size=1)[0]
-        if legal_mask[did][pid]:
-            pro_time = random.randint(5, 10)
-            data_list.append([pid, did, pro_time])
-            p_st[0][pid] -= 1
-            d_st[0][did] += 1
-            if p_st[0][pid] == 0:
-                p_a.remove(pid)
-            if d_st[0][did] == math.ceil(max_job_num/d_num):
-                d_a.remove(did)
-            job_num += 1
-            legal_mask[did][pid] = False
-    data = pd.DataFrame(data=data_list, columns=["pid", "did", "pro_time"], index=None)
-    data.to_csv(f"../data/{d_num}_{p_num}_{max_job_num}.csv", index=False)
-
-
-def gen_data1(num_patients, num_doctors):
+def gen_data(num_patients, num_doctors):
     multi_reg_patient_num = int(num_patients*0.1)
     multi_3 = np.random.choice(a=num_patients, size=multi_reg_patient_num, replace=False)
     multi_2 = np.random.choice(a=multi_3, size=2, replace=False)
@@ -170,7 +52,7 @@ def gen_data1(num_patients, num_doctors):
 
 if __name__ == '__main__':
     # distance_d(10, "distance")
-    gen_data1(300, 10)
+    gen_data(300, 10)
     # doctors = gen_doctors()
     # doc_header = ['did', 'reg_num', 'start_time', 'avg_pro_time']
     # save_data(doc_header, doctors, "doc_am")

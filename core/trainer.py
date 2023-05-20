@@ -68,37 +68,21 @@ class Trainer:
                 t_list.append(t)
             for thread in t_list:
                 thread.join()
-            max_len = 0
-            # min_len = 999999
+            idle_total_list = []
             for env in self.envs:
-                # for d_sc in env.d_sc_list:
-                #     sc = np.array(d_sc)
-                #     final_len = sc[:, 4].max()
-                #     max_len = max(final_len, max_len)
-                #     min_len = min(final_len, min_len)
-                # p_idle = np.sum(env.patients.total_idle_time)
+
+                p_idle = np.sum(env.p_total_idle_time)
                 d_idle = np.sum(env.d_total_idle_time)
-                max_len = max(d_idle, max_len)
-                # total_idle_time = int(p_idle + d_idle)
+
+                total_idle_time = int(p_idle + d_idle)
                 # total_time = env.d_total_time + env.p_total_time
-                # self.idle_total.append([d_idle, p_idle, total_idle_time,
-                #                         env.d_total_time, env.p_total_time, total_time, episode])
-                # # self.scheduled_data = []
-                # # for did in range(self.doctor.player_num):
-                # #     sc = env.doctor.schedule_list[did]
-                # #     self.scheduled_data.extend(sc)
-                # # self.file_name = f"/10_60/{int(d_idle)}_{int(env.d_total_time)}"
-                # # self.save_data(self.file_name)
-                #
-                # if d_idle < self.min_idle_time:
-                #     self.min_idle_time = d_idle
-                #     self.scheduled_data = []
-                #     for did in range(self.doctor.player_num):
-                #         sc = env.doctor.schedule_list[did]
-                #         self.scheduled_data.extend(sc)
-                #     self.file_name = f"{int(d_idle)}_{int(env.d_total_time)}"
-                #     self.save_data(self.file_name)
+                idle_total_list.append(d_idle)
+                idle_total_list.append(p_idle)
+                idle_total_list.append(total_idle_time)
+
                 env.reset()
+            idle_total_list.append(episode)
+            self.idle_total.append(idle_total_list)
 
             # update net
             self.buffer.get_data()
@@ -111,7 +95,7 @@ class Trainer:
                 loss = self.ppo.learn(buf)
             self.buffer.reset()
 
-            self.r_l.append([np.mean(self.sum_reward), loss.item(), episode])
+            self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
 
             self.scheduler.step()
 
@@ -119,15 +103,15 @@ class Trainer:
             # print("总时间：", self.env.get_total_time())
             if episode % 1 == 0:
                 print("loss:", loss.item())
-                print("max:", max_len)
-                print("mean_reward:", np.mean(self.sum_reward), episode)
+                print("max:", d_idle)
+                print("mean_reward:", self.sum_reward[0], episode)
             if episode % 100 == 0:
                 self.episode = episode
                 self.save_model(self.model_name)
-                # self.save_info(self.r_l, f"r_l_{self.model_name}",
-                #                ['reward', 'loss', 'ep'], "r_l")
-                # self.save_info(self.idle_total, f"i_t_{self.model_name}",
-                #                ['d_idle', 'p_idle', 'idle', 'total_d', 'total_p', 'total', 'ep'], "i_t")
+                self.save_info(self.r_l, f"r_l_{self.model_name}",
+                               ['reward1', 'reward2', 'loss', 'ep'], "r_l")
+                self.save_info(self.idle_total, f"i_t_{self.model_name}",
+                               ['d_idle', 'p_idle', 'idle', 'd_idle2', 'p_idle2', 'idle2', 'ep'], "i_t")
                 self.r_l = []
                 self.idle_total = []
 
@@ -209,7 +193,7 @@ class Trainer:
     def save_info(self, data_list, file_name, headers, path):
         with open(f'./data/{path}/{file_name}.csv', mode='a+', encoding='utf-8-sig', newline='') as f:
             csv_writer = csv.writer(f)
-            if self.episode == 120:
+            if self.episode == 100:
                 csv_writer.writerow(headers)
             csv_writer.writerows(data_list)
             print(f'{file_name}')
