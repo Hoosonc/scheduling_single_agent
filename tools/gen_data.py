@@ -108,11 +108,11 @@ def distance_d(doc_num, file_name):
 
 
 def gen_data(p_num, d_num):
-    multi = int(p_num*0.15)
+    multi = int(p_num*0.10)
     data_list = []
     p_st = np.ones((1, p_num), dtype="int64")
     multi_reg = np.random.choice(a=p_num, p=None, size=multi, replace=False)
-    multi_reg_2 = np.random.choice(a=len(multi_reg), p=None, size=random.randint(0, multi), replace=False)
+    multi_reg_2 = np.random.choice(a=len(multi_reg), p=None, size=10, replace=False)
     p_st[0][multi_reg] = 3
     p_st[0][multi_reg[multi_reg_2]] = 2
     d_st = np.zeros((1, d_num), dtype="int64")
@@ -126,7 +126,7 @@ def gen_data(p_num, d_num):
         pid = np.random.choice(a=p_a, p=None, size=1)[0]
         did = np.random.choice(a=d_a, p=None, size=1)[0]
         if legal_mask[did][pid]:
-            pro_time = random.randint(10, 20)
+            pro_time = random.randint(5, 10)
             data_list.append([pid, did, pro_time])
             p_st[0][pid] -= 1
             d_st[0][did] += 1
@@ -140,9 +140,37 @@ def gen_data(p_num, d_num):
     data.to_csv(f"../data/{d_num}_{p_num}_{max_job_num}.csv", index=False)
 
 
+def gen_data1(num_patients, num_doctors):
+    multi_reg_patient_num = int(num_patients*0.1)
+    multi_3 = np.random.choice(a=num_patients, size=multi_reg_patient_num, replace=False)
+    multi_2 = np.random.choice(a=multi_3, size=2, replace=False)
+    mask = np.isin(multi_3, multi_2, invert=True)
+
+    # 应用布尔掩码来删除数组b中的元素
+    multi_3 = multi_3[mask]
+    all_reg_list = []
+    doc_reg_num = np.zeros((num_doctors,))
+    did_list = [i for i in range(num_doctors)]
+    for i in range(num_patients):
+        if i in multi_3:
+            size = 3
+        elif i in multi_2:
+            size = 2
+        else:
+            size = 1
+        d_idx = np.random.choice(a=did_list, size=size, replace=False)
+        for d in d_idx:
+            all_reg_list.append([i, d, random.randint(5, 10)])
+            doc_reg_num[d] += 1
+            if doc_reg_num[d] == 37:
+                did_list.remove(d)
+    df = pd.DataFrame(data=all_reg_list, columns=["pid", "did", "pro_time"])
+    df.to_csv(f"../data/{num_doctors}_{num_patients}_{len(all_reg_list)}.csv", index=False)
+
+
 if __name__ == '__main__':
     # distance_d(10, "distance")
-    gen_data(140, 15)
+    gen_data1(300, 10)
     # doctors = gen_doctors()
     # doc_header = ['did', 'reg_num', 'start_time', 'avg_pro_time']
     # save_data(doc_header, doctors, "doc_am")

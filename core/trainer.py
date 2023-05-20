@@ -135,7 +135,7 @@ class Trainer:
         buffer = self.buffer.buffer_list[i]
         done = False
         for step in range(self.jobs * self.machines * 5):
-            data = env.state[:, [0, 2, 4, 5]]
+            data = env.state[:, [2, 4, 5]]
 
             m_edge_index = coo_matrix(env.m_edge_matrix)
             m_edge_index = np.array([m_edge_index.row, m_edge_index.col])
@@ -174,7 +174,7 @@ class Trainer:
 
         prob, value, log_probs = self.model(data)
 
-        mask = (env.state[:, 4] != 0)
+        mask = (env.state[:, 4] == 1)
         mask = torch.from_numpy(mask).to(device).view(1, -1)
         # 将无效动作对应的概率值设置为0
         masked_probs = prob * mask
@@ -183,7 +183,6 @@ class Trainer:
         valid_probs = masked_probs / masked_probs.sum(dim=1)
 
         policy_head = Categorical(probs=valid_probs.view(1, -1))
-
         # action = policy_head.sample()
         action = torch.argmax(valid_probs, dim=1)
 

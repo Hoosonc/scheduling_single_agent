@@ -161,7 +161,7 @@ class Environment:
 
                 patient_idle_time = self.cal_p_idle(pid)
 
-                reward += (patient_idle_time - self.p_total_idle_time[pid])
+                # reward += (patient_idle_time - self.p_total_idle_time[pid])
                 self.p_total_idle_time[pid] = patient_idle_time
                 total_idle_time_p = np.sum(self.p_total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
@@ -171,14 +171,14 @@ class Environment:
 
             self.update_states(insert_data[2], pid, did, process_id)
         # print(reward)
-        if sum(self.state[:, 3]) == 0:
+        if sum(self.state[:, 4]) == 0:
             self.done = True
 
         return self.done, self.reward
 
     def update_states(self, start_time, pid, did, process_id):
 
-        self.state[process_id, 4] = 0
+        self.state[process_id, 4] = 0  # 改为不可分配状态
         self.state[process_id, 5] = start_time
         self.state[process_id, 6] = start_time
         idx_list = []

@@ -35,13 +35,13 @@ class Params:
                                  help='maximum length of an episode (default: 1)')
         self.parser.add_argument('--update_num', type=int, default=4,
                                  help='')
-        self.parser.add_argument('--env_num', type=int, default=1,
+        self.parser.add_argument('--env_num', type=int, default=2,
                                  help='')
-        self.parser.add_argument('--mini_size', type=int, default=35,
+        self.parser.add_argument('--mini_size', type=int, default=179,
                                  help='')
         self.parser.add_argument('--episode', type=int, default=10000,
                                  help='How many episode to train the RL algorithm')
-        self.parser.add_argument('--reg-path', type=str, default='./data/10_120_140.csv',
+        self.parser.add_argument('--reg-path', type=str, default='./data/10_300_358.csv',
                                  help='The path of Reg file')
         self.parser.add_argument('--doc-path', type=str, default='./data/doc.csv',
                                  help='The path of doc file')
