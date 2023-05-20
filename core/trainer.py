@@ -54,7 +54,7 @@ class Trainer:
         self.sum_reward = []
         self.model_name = f"{self.jobs}_{self.machines}"
         # self.load_params(self.model_name)
-        self.scheduler = StepLR(self.ppo.optimizer, step_size=240, gamma=0.81)
+        # self.scheduler = StepLR(self.ppo.optimizer, step_size=240, gamma=0.81)
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
 
     def train(self):
@@ -97,13 +97,13 @@ class Trainer:
 
             self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
 
-            self.scheduler.step()
+            # self.scheduler.step()
 
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())
             if episode % 1 == 0:
                 print("loss:", loss.item())
-                print("max:", d_idle)
+                print("d_idle:", d_idle)
                 print("mean_reward:", self.sum_reward[0], episode)
             if episode % 100 == 0:
                 self.episode = episode
