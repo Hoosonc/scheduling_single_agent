@@ -6,22 +6,30 @@
 import pandas as pd
 
 
-def check_time(path):
+def check_time(path=None, file=None):
     total_time_d = 0
     total_time_p = 0
-    file = pd.read_csv(path, encoding='utf-8-sig').fillna('')
+    d_idle = 0
+    if path is not None:
+        file = pd.read_csv(path, encoding='utf-8-sig').fillna('')
     cla_by_did = file.groupby("did")
     cla_by_pid = file.groupby("pid")
     for sc_d in cla_by_did:
         s = sc_d[1].sort_values("start_time").values
         total_time_d += s[len(s)-1][4]
+        for i in range(len(s)):
+            if i == 0:
+                d_idle += s[i][2]
+            else:
+                assert (s[i][2] - s[i-1][[4]]) >= 0
+                d_idle += (s[i][2] - s[i-1][4])
     for sc_p in cla_by_pid:
         s_p = sc_p[1].sort_values("start_time").values
         if len(s_p) > 1:
             total_time_p += s_p[len(s_p)-1][4] - s_p[0][2]
-    return total_time_d, total_time_p
+    return total_time_d, total_time_p, d_idle
 
 
 if __name__ == '__main__':
-    d, p = check_time(f"../data/save_data/other_rules/10_60_78/or_tool.csv")
-    print(d, p, d+p)
+    d, p, d_idle = check_time(f"../data/save_data/0_3568.csv")
+    print(d, p, d+p, d_idle)

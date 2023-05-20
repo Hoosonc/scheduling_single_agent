@@ -101,10 +101,10 @@ class Trainer:
 
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())
-            if episode % 1 == 0:
-                print("loss:", loss.item())
-                print("d_idle:", d_idle)
-                print("mean_reward:", self.sum_reward[0], episode)
+            # if episode % 1 == 0:
+            #     print("loss:", loss.item())
+            #     print("d_idle:", d_idle)
+            #     print("mean_reward:", self.sum_reward[0], episode)
             if episode % 100 == 0:
                 self.episode = episode
                 self.save_model(self.model_name)
@@ -196,4 +196,4 @@ class Trainer:
             if self.episode == 100:
                 csv_writer.writerow(headers)
             csv_writer.writerows(data_list)
-            print(f'{file_name}')
+            # print(f'{file_name}')

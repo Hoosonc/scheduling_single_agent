@@ -6,6 +6,8 @@
 
 """Minimal jobshop example."""
 import collections
+from tools.check_time import check_time
+import numpy as np
 from ortools.sat.python import cp_model
 import pandas as pd
 import csv
@@ -16,11 +18,14 @@ def save_data(data_list, i):
     for doc_id in range(10):
         for task in data_list[doc_id]:
             all_data.append([doc_id, int(task[1]), task[0], int(task[3]), int(task[0] + int(task[3]))])
-    with open(f"../data/save_data/or_tool_{i}.csv", mode="w+", newline="") as f:
-        csv_w = csv.writer(f)
-        header = ["did", "pid", "start_time", "pro_time", "finish_time"]
-        csv_w.writerow(header)
-        csv_w.writerows(all_data)
+    df = pd.DataFrame(data=all_data, columns=["did", "pid", "start_time", "pro_time", "finish_time"])
+    d, p, d_idle = check_time(file=df)
+    return d_idle
+    # with open(f"../data/save_data/or_tool_{i}.csv", mode="w+", newline="") as f:
+    #     csv_w = csv.writer(f)
+    #     header = ["did", "pid", "start_time", "pro_time", "finish_time"]
+    #     csv_w.writerow(header)
+    #     csv_w.writerows(all_data)
 
 
 def get_data(path):
@@ -118,12 +123,16 @@ def main(i, path):
         for machine in all_machines:
             # Sort by starting time.
             assigned_jobs[machine].sort()
-        save_data(assigned_jobs, i)
+        d_idle = save_data(assigned_jobs, i)
+        return d_idle
 
     else:
         print('No solution found.')
 
 
 if __name__ == '__main__':
-    for i in range(1):
-        main(i, "../data/10_80_99.csv")
+    d_idle_list = []
+    for i in range(100):
+        d_idle = main(i, "../data/10_300_358.csv")
+        d_idle_list.append(d_idle)
+    print(np.mean(d_idle_list))
