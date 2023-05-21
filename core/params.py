@@ -13,9 +13,9 @@ class Params:
         self.args = self.parser.parse_args()
 
     def get_parser(self):
-        self.parser.add_argument('--lr_v', type=float, default=0.00002,
+        self.parser.add_argument('--lr_v', type=float, default=0.01,
                                  help='learning rate (default: 0.0001)')
-        self.parser.add_argument('--epsilon', type=float, default=0.25,
+        self.parser.add_argument('--epsilon', type=float, default=0.3,
                                  help='epsilon (default: 0.3)')
         self.parser.add_argument('--gamma', type=float, default=0.99,
                                  help='discount factor for rewards (default: 0.99)')
@@ -33,9 +33,9 @@ class Params:
                                  help='number of forward steps in A2C (default: 300)')
         self.parser.add_argument('--max-steps', type=int, default=78,
                                  help='maximum length of an episode (default: 1)')
-        self.parser.add_argument('--update_num', type=int, default=4,
+        self.parser.add_argument('--update_num', type=int, default=2,
                                  help='')
-        self.parser.add_argument('--env_num', type=int, default=2,
+        self.parser.add_argument('--env_num', type=int, default=1,
                                  help='')
         self.parser.add_argument('--mini_size', type=int, default=179,
                                  help='')

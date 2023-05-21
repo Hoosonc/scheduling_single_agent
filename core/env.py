@@ -31,8 +31,6 @@ class Environment:
         self.p_sc_list = None
         self.d_sc_list = None
 
-        self.candidate = None
-        self.random_sort = None
         self.p_last_schedule = None
         self.d_position = None
         self.d_total_idle_time = None
@@ -61,9 +59,6 @@ class Environment:
         self.idle_total = []
 
     def reset(self):
-        torch.manual_seed(random.randint(1000, 5000))
-        self.random_sort = []
-        self.candidate = np.zeros((self.machines,))
 
         self.state = self.all_job_list.copy()
         self.state = np.concatenate([self.state, np.ones((self.state.shape[0], 1))], axis=1)  # 添加“是否处理”

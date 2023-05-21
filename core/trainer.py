@@ -32,6 +32,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class Trainer:
     def __init__(self, args):
         self.args = args
+        torch.manual_seed(args.seed)
         self.envs = [Environment(args) for _ in range(args.env_num)]
         for env in self.envs:
             env.reset()
@@ -54,12 +55,17 @@ class Trainer:
         self.sum_reward = []
         self.model_name = f"{self.jobs}_{self.machines}"
         # self.load_params(self.model_name)
-        # self.scheduler = StepLR(self.ppo.optimizer, step_size=240, gamma=0.81)
+        self.scheduler = StepLR(self.ppo.optimizer, step_size=1, gamma=0.5)
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
 
     def train(self):
         # env = self.env
-        for episode in range(1, self.args.episode + 1):
+        n = 0
+        for episode in range(self.args.episode):
+            decay_episode = (20 * (2**n))
+            if episode == decay_episode:
+                self.scheduler.step()
+                n += 1
             self.sum_reward = []
             t_list = []
             for i in range(self.args.env_num):
@@ -95,23 +101,28 @@ class Trainer:
                 loss = self.ppo.learn(buf)
             self.buffer.reset()
 
-            self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
+            # self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
+            self.r_l.append([self.sum_reward[0], loss.item(), episode])
 
             # self.scheduler.step()
 
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())
-            # if episode % 1 == 0:
-            #     print("loss:", loss.item())
-            #     print("d_idle:", d_idle)
-            #     print("mean_reward:", self.sum_reward[0], episode)
-            if episode % 100 == 0:
+            if episode % 1 == 0:
+                print("loss:", loss.item())
+                print("d_idle:", d_idle)
+                print("mean_reward:", self.sum_reward[0], episode)
+            if (episode+1) % 100 == 0:
                 self.episode = episode
                 self.save_model(self.model_name)
+                # self.save_info(self.r_l, f"r_l_{self.model_name}",
+                #                ['reward1', 'reward2', 'loss', 'ep'], "r_l")
                 self.save_info(self.r_l, f"r_l_{self.model_name}",
-                               ['reward1', 'reward2', 'loss', 'ep'], "r_l")
+                               ['reward1', 'loss', 'ep'], "r_l")
+                # self.save_info(self.idle_total, f"i_t_{self.model_name}",
+                #                ['d_idle', 'p_idle', 'idle', 'd_idle2', 'p_idle2', 'idle2', 'ep'], "i_t")
                 self.save_info(self.idle_total, f"i_t_{self.model_name}",
-                               ['d_idle', 'p_idle', 'idle', 'd_idle2', 'p_idle2', 'idle2', 'ep'], "i_t")
+                               ['d_idle', 'p_idle', 'idle', 'ep'], "i_t")
                 self.r_l = []
                 self.idle_total = []
 
@@ -119,7 +130,7 @@ class Trainer:
         buffer = self.buffer.buffer_list[i]
         done = False
         for step in range(self.jobs * self.machines * 5):
-            data = env.state[:, [2, 4, 5]]
+            data = env.state[:, [2, 4, 5, 6]]
 
             m_edge_index = coo_matrix(env.m_edge_matrix)
             m_edge_index = np.array([m_edge_index.row, m_edge_index.col])
@@ -193,7 +204,7 @@ class Trainer:
     def save_info(self, data_list, file_name, headers, path):
         with open(f'./data/{path}/{file_name}.csv', mode='a+', encoding='utf-8-sig', newline='') as f:
             csv_writer = csv.writer(f)
-            if self.episode == 100:
+            if (self.episode+1) == 100:
                 csv_writer.writerow(headers)
             csv_writer.writerows(data_list)
             # print(f'{file_name}')
