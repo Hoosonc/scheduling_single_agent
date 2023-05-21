@@ -20,7 +20,7 @@ class DQN_update:
     def learn(self, buffer):
         rewards = buffer.buffer_list[0].reward_list
         terminates = buffer.buffer_list[0].terminal_list
-        terminates = torch.from_numpy(np.array(terminates, dtype=int)).to(self.device).detach().view(1, -1)
+        terminates = torch.from_numpy(np.array(terminates, dtype="float32")).to(self.device).detach().view(1, -1)
         n_steps = torch.from_numpy(np.arange(len(rewards))).to(self.device).view(1, -1)
         q_list = buffer.buffer_list[0].q_list
         q_list.append(torch.tensor([0]).view(1, 1).to(self.device))
@@ -28,10 +28,11 @@ class DQN_update:
         q = torch.cat(q_list[:-1], dim=1)
         q_next = torch.cat(q_list[1:], dim=1)
         returns = rewards + (self.gamma ** n_steps) * (1 - terminates) * q_next
-        loss = self.loss_fn(q, returns).to(torch.float32)
+        loss = 0.5*(q-returns).pow(2).sum()
 
         self.optimizer.zero_grad()
 
         loss.backward()
 
         self.optimizer.step()
+        return loss

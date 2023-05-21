@@ -43,5 +43,5 @@ class Params:
                                  help='How many episode to train the RL algorithm')
         self.parser.add_argument('--reg-path', type=str, default='./data/10_300_358.csv',
                                  help='The path of Reg file')
-        self.parser.add_argument('--policy', type=str, default='dqn',
+        self.parser.add_argument('--policy', type=str, default='AC',
                                  help='')

@@ -117,10 +117,10 @@ class Trainer:
 
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())
-            # if episode % 1 == 0:
-            #     print("loss:", loss.item())
-            #     print("d_idle:", d_idle)
-            #     print("sum_reward:", self.sum_reward[0], episode)
+            if episode % 1 == 0:
+                print("loss:", loss.item())
+                print("d_idle:", d_idle)
+                print("sum_reward:", self.sum_reward[0], episode)
             if (episode + 1) % 5 == 0:
                 self.episode = episode
                 self.save_model(self.model_name)
@@ -219,7 +219,7 @@ class Trainer:
     def save_model(self, file_name):
         # torch.save(self.model.actor.state_dict(), f'./net/params/actor.pth')
         # torch.save(self.model.critic.state_dict(), f'./net/params/critic.pth')
-        torch.save(self.model.state_dict(), f'./net/params/{file_name}.pth')
+        torch.save(self.model.state_dict(), f'./net/params/{file_name}_{self.policy}.pth')
 
     def load_params(self, model_name):
         self.model.load_state_dict(torch.load(f"./net/params/{model_name}.pth"))
@@ -233,7 +233,7 @@ class Trainer:
             print(f'{file_name}')
 
     def save_info(self, data_list, file_name, headers, path):
-        with open(f'./data/{path}/{file_name}.csv', mode='a+', encoding='utf-8-sig', newline='') as f:
+        with open(f'./data/{path}/{file_name}_{self.policy}.csv', mode='a+', encoding='utf-8-sig', newline='') as f:
             csv_writer = csv.writer(f)
             if (self.episode + 1) == 5:
                 csv_writer.writerow(headers)

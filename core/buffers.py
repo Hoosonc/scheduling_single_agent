@@ -36,9 +36,9 @@ class Buffer:
         self.reward_list.append(reward_t)
         self.terminal_list.append(terminal_t)
         if value_t is not None:
-            self.value_list.append(value_t.detach())
+            self.value_list.append(value_t)
         if log_prob_t is not None:
-            self.log_prob_list.append(log_prob_t.detach())
+            self.log_prob_list.append(log_prob_t)
 
     def compute_reward_to_go_returns_adv(self):
         """
@@ -52,11 +52,11 @@ class Buffer:
         """
         # (N,T) -> (T,N)   N:n_envs   T:trajectory_length
 
-        rewards = torch.from_numpy(np.array(self.reward_list)).to(device).detach().view(1, -1)
+        rewards = torch.from_numpy(np.array(self.reward_list)).to(device).view(1, -1)
         values = torch.cat([value for value in self.value_list], dim=0).view(1, -1)
         log_prob = torch.cat([log_p for log_p in self.log_prob_list], dim=0).view(1, -1)
         self.log_prob = log_prob
-        terminals = torch.from_numpy(np.array(self.terminal_list, dtype=int)).to(device).detach().view(1, -1)
+        terminals = torch.from_numpy(np.array(self.terminal_list, dtype=int)).to(device).view(1, -1)
         rewards = torch.transpose(rewards, 1, 0)
         values = torch.transpose(values, 1, 0)
         terminals = torch.transpose(terminals, 1, 0)
@@ -151,8 +151,8 @@ class BatchBuffer:
         # self.edges_attr = np.array(edge_attr_list)
         self.actions = np.array(action_list)
         # self.candidate = candidate_list
-        self.log_prob = torch.cat([log_prob.detach() for log_prob in log_prob_list], dim=0).view(1, -1)
-        self.values = torch.cat([value.detach() for value in value_list], dim=0).view(1, -1)
+        self.log_prob = torch.cat([log_prob for log_prob in log_prob_list], dim=0).view(1, -1)
+        self.values = torch.cat([value for value in value_list], dim=0).view(1, -1)
         # self.value_list = np.array(self.value_list)
         # self.log_prob_list = np.array(self.log_prob_list)
         self.rewards = np.array(reward_list)
