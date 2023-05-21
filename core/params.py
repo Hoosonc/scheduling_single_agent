@@ -13,17 +13,17 @@ class Params:
         self.args = self.parser.parse_args()
 
     def get_parser(self):
-        self.parser.add_argument('--lr_v', type=float, default=0.01,
+        self.parser.add_argument('--lr_v', type=float, default=0.001,
                                  help='learning rate (default: 0.0001)')
         self.parser.add_argument('--epsilon', type=float, default=0.3,
                                  help='epsilon (default: 0.3)')
-        self.parser.add_argument('--gamma', type=float, default=0.99,
+        self.parser.add_argument('--gamma', type=float, default=0.95,
                                  help='discount factor for rewards (default: 0.99)')
-        self.parser.add_argument('--gae-lambda', type=float, default=1,
+        self.parser.add_argument('--gae-lambda', type=float, default=0.9,
                                  help='lambda parameter for GAE (default: 1.00)')
         self.parser.add_argument('--entropy-coefficient', type=float, default=0.01,
                                  help='entropy term coefficient (default: 0.01)')
-        self.parser.add_argument('--value-loss-coefficient', type=float, default=0.5,
+        self.parser.add_argument('--value-loss-coefficient', type=float, default=1,
                                  help='value loss coefficient (default: 0.5)')
         self.parser.add_argument('--max-grad-norm', type=float, default=10,
                                  help='max grad norm (default: 50)')
@@ -39,7 +39,7 @@ class Params:
                                  help='')
         self.parser.add_argument('--mini_size', type=int, default=179,
                                  help='')
-        self.parser.add_argument('--episode', type=int, default=10000,
+        self.parser.add_argument('--episode', type=int, default=200,
                                  help='How many episode to train the RL algorithm')
         self.parser.add_argument('--reg-path', type=str, default='./data/10_300_358.csv',
                                  help='The path of Reg file')

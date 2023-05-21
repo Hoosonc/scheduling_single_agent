@@ -28,34 +28,25 @@ class AC(torch.nn.Module):
         self.jobs = jobs
         self.machines = machines
 
-        self.conv1 = GATConv(in_channels=4, out_channels=4, heads=4)
-        self.Norm1 = nn.BatchNorm1d(16)
+        self.conv1 = GATConv(in_channels=4, out_channels=16, heads=4)
+        self.Norm1 = nn.BatchNorm1d(64)
 
-        self.conv2 = GATConv(in_channels=16, out_channels=16, heads=4)
+        self.conv2 = GATConv(in_channels=64, out_channels=16, heads=4)
         self.Norm2 = nn.BatchNorm1d(64)
 
         self.conv3 = GATConv(in_channels=64, out_channels=32, heads=1)
         self.Norm3 = nn.BatchNorm1d(32)
         self.conv4 = GATConv(in_channels=32, out_channels=1, heads=1)
-        # self.actor = nn.Sequential(
-        #     Linear(128, 64),
-        #     nn.Dropout(),
-        #     # nn.ReLU(),
-        #     # nn.BatchNorm1d(64),
-        #     Linear(64, 32),
-        #     nn.Dropout(),
-        #     # nn.BatchNorm1d(32),
-        #     Linear(32, 1)
-        # )
+
         self.critic = nn.Sequential(
             Linear(64, 32),
-            # nn.Dropout(),
+            nn.LayerNorm(32),
+            nn.Dropout(),
             nn.ReLU(),
-            # nn.BatchNorm1d(32),
             Linear(32, 16),
-            # nn.Dropout(),
+            nn.LayerNorm(16),
+            nn.Dropout(),
             nn.ReLU(),
-            # nn.BatchNorm1d(16),
             Linear(16, 1)
         )
         self.mini_bf_list = [mini_bf() for _ in range(20)]
@@ -72,10 +63,6 @@ class AC(torch.nn.Module):
         # x = f.dropout(x, training=True)
         pooled_x = global_mean_pool(x, None)
 
-        # dummy = candidate.view(1, -1, 1).expand(-1, self.jobs, x.size(-1))
-        # candidate_feature = torch.gather(x.reshape(dummy.size(0), -1, dummy.size(-1)), 1, dummy)
-        # h_pooled_repeated = pooled_x.unsqueeze(1).expand_as(candidate_feature)
-        # concateFea = torch.cat((candidate_feature, h_pooled_repeated), dim=-1)
         actor = self.conv4(self.Norm3(self.conv3(x, data.edge_index)), data.edge_index)
 
         value = self.critic(pooled_x).view(1, 1)

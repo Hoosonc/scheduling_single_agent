@@ -106,36 +106,7 @@ class Environment:
 
             pro_time = self.state[process_id, 2]
             insert_data = self.find_position(pid, did, process_id, pro_time)
-            if self.d_position[did] == 0:
-                d_last_time = 0
-            else:
-                # prev_process = self.d_sc_list[-1][6]
-                # self.edge_matrix[prev_process][process_id] = 1
-                sc_d = pd.DataFrame(np.array(self.d_sc_list[did]),
-                                    columns=['did', 'pid', 'start_time', 'pro_time', 'finish_time',
-                                             "step", "job_id"]).sort_values("start_time").values
-                d_last_time = sc_d[int(self.d_position[did]) - 1][4]
-            if insert_data[4] > d_last_time:
-                self.d_total_time += (insert_data[4] - d_last_time)
 
-            if last_schedule_list[0][pid] == 0:
-                self.p_s_f[0][pid] = insert_data[2]
-                self.p_s_f[1][pid] = insert_data[4]
-            else:
-                if last_schedule_list[0][pid] == 1:
-                    if insert_data[4] <= self.p_s_f[0][pid]:
-                        self.p_s_f[0][pid] = insert_data[2]
-                    elif insert_data[4] > self.p_s_f[1][pid]:
-                        self.p_s_f[1][pid] = insert_data[4]
-                    self.p_total_time += self.p_s_f[1][pid] - self.p_s_f[0][pid]
-                elif last_schedule_list[0][pid] > 1:
-                    old_time = self.p_s_f[1][pid] - self.p_s_f[0][pid]
-                    if insert_data[4] <= self.p_s_f[0][pid]:
-                        self.p_s_f[0][pid] = insert_data[2]
-                    elif insert_data[4] > self.p_s_f[1][pid]:
-                        self.p_s_f[1][pid] = insert_data[4]
-                    assert self.p_s_f[1][pid] - self.p_s_f[0][pid] - old_time >= 0
-                    self.p_total_time += self.p_s_f[1][pid] - self.p_s_f[0][pid] - old_time
             insert_data.append(step)
             insert_data.append(process_id)
 

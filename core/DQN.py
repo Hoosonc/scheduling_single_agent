@@ -6,10 +6,11 @@
 import torch
 
 
-class DQN:
-    def __init__(self, net, args):
+class DQN_update:
+    def __init__(self, net, device, args):
         self.net = net
         self.args = args
+        self.device = device
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.args.lr_v)
 
     def update_by_dqn(self, buffer, model, gamma):

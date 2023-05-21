@@ -26,6 +26,8 @@ from torch_geometric.data import Data
 from scipy.sparse import coo_matrix
 from core.buffers import BatchBuffer
 from core.rl_algorithms import PPOClip
+from core.DQN import DQN_update
+from core.Actor_critic import AC_update
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -40,12 +42,19 @@ class Trainer:
             env.reset()
         self.jobs = self.envs[0].jobs
         self.machines = self.envs[0].machines
+        self.algorithm = None
         if self.policy == "dqn":
             self.model = DQN(self.machines, self.machines).to(device)
+            self.algorithm = DQN_update(self.model, device, self.args)
         else:
             self.model = AC(self.machines, self.machines).to(device)
+            if self.policy == "ppo":
+                self.algorithm = PPOClip(self.model, device, args)
+            else:
+                self.algorithm = AC_update(self.model, device, self.args)
 
-        self.ppo = PPOClip(self.model, device, args)
+        self.scheduler = StepLR(self.algorithm.optimizer, step_size=1000, gamma=0.5)
+
         self.total_time = 0
         self.min_idle_time = 1
         self.min_total_time = 1800
@@ -60,17 +69,14 @@ class Trainer:
         self.sum_reward = []
         self.model_name = f"{self.jobs}_{self.machines}"
         # self.load_params(self.model_name)
-        self.scheduler = StepLR(self.ppo.optimizer, step_size=1, gamma=0.5)
+
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
 
     def train(self):
         # env = self.env
         n = 0
         for episode in range(self.args.episode):
-            decay_episode = (50 * (2**n))
-            if episode == decay_episode:
-                self.scheduler.step()
-                n += 1
+
             self.sum_reward = []
             t_list = []
             for i in range(self.args.env_num):
@@ -103,21 +109,21 @@ class Trainer:
                 # self.env.reset()
 
                 buf = mini_buffer[i]
-                loss = self.ppo.learn(buf)
+                loss = self.algorithm.learn(buf)
             self.buffer.reset()
 
             # self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
             self.r_l.append([self.sum_reward[0], loss.item(), episode])
 
-            # self.scheduler.step()
+            self.scheduler.step()
 
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())
-            if episode % 1 == 0:
-                print("loss:", loss.item())
-                print("d_idle:", d_idle)
-                print("sum_reward:", self.sum_reward[0], episode)
-            if (episode+1) % 100 == 0:
+            # if episode % 1 == 0:
+            #     print("loss:", loss.item())
+            #     print("d_idle:", d_idle)
+            #     print("sum_reward:", self.sum_reward[0], episode)
+            if (episode+1) % 5 == 0:
                 self.episode = episode
                 self.save_model(self.model_name)
                 # self.save_info(self.r_l, f"r_l_{self.model_name}",
@@ -209,7 +215,7 @@ class Trainer:
     def save_info(self, data_list, file_name, headers, path):
         with open(f'./data/{path}/{file_name}.csv', mode='a+', encoding='utf-8-sig', newline='') as f:
             csv_writer = csv.writer(f)
-            if (self.episode+1) == 100:
+            if (self.episode+1) == 5:
                 csv_writer.writerow(headers)
             csv_writer.writerows(data_list)
             # print(f'{file_name}')
