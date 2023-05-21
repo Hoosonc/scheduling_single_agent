@@ -55,10 +55,6 @@ class Trainer:
 
         self.scheduler = StepLR(self.algorithm.optimizer, step_size=1000, gamma=0.5)
 
-        self.total_time = 0
-        self.min_idle_time = 1
-        self.min_total_time = 1800
-        self.min_d_idle = 1
         self.scheduled_data = []
         self.file_name = ""
         self.reward_list = []
@@ -73,8 +69,6 @@ class Trainer:
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
 
     def train(self):
-        # env = self.env
-        n = 0
         for episode in range(self.args.episode):
 
             self.sum_reward = []
@@ -87,7 +81,6 @@ class Trainer:
                 thread.join()
             idle_total_list = []
             for env in self.envs:
-
                 p_idle = np.sum(env.p_total_idle_time)
                 d_idle = np.sum(env.d_total_idle_time)
 
@@ -102,14 +95,19 @@ class Trainer:
             self.idle_total.append(idle_total_list)
 
             # update net
-            self.buffer.get_data()
-            mini_buffer = self.buffer.get_mini_batch(self.args.mini_size, self.args.update_num)
-            loss = 0
-            for i in range(0, self.args.update_num):
-                # self.env.reset()
-
-                buf = mini_buffer[i]
-                loss = self.algorithm.learn(buf)
+            if self.policy == "dqn":
+                loss = self.algorithm.learn(self.buffer)
+            else:
+                if self.policy == "ppo":
+                    self.buffer.get_data()
+                    mini_buffer = self.buffer.get_mini_batch(self.args.mini_size, self.args.update_num)
+                    loss = 0
+                    for i in range(0, self.args.update_num):
+                        # self.env.reset()
+                        buf = mini_buffer[i]
+                        loss = self.algorithm.learn(buf)
+                else:
+                    loss = self.algorithm.learn(self.buffer.buffer_list[0])
             self.buffer.reset()
 
             # self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
@@ -123,7 +121,7 @@ class Trainer:
             #     print("loss:", loss.item())
             #     print("d_idle:", d_idle)
             #     print("sum_reward:", self.sum_reward[0], episode)
-            if (episode+1) % 5 == 0:
+            if (episode + 1) % 5 == 0:
                 self.episode = episode
                 self.save_model(self.model_name)
                 # self.save_info(self.r_l, f"r_l_{self.model_name}",
@@ -153,11 +151,20 @@ class Trainer:
             edge_index = torch.tensor(edge_index.astype("int64")).to(device)
             # candidate = torch.tensor(env.candidate.copy().astype("int64")).to(device)
             data = Data(x=data, edge_index=edge_index, num_nodes=len(data))
-
-            action, value, log_prob = self.choose_action(data, env)
+            if self.policy == "dqn":
+                value, log_prob = 0, 0
+                action, q, _ = self.choose_action(data, env)
+            else:
+                q = 0
+                action, value, log_prob = self.choose_action(data, env)
 
             done, reward = env.step(action, step)
-            self.buffer.buffer_list[i].add_data(data, action, reward, done, value, log_prob)
+            if self.policy == "dqn":
+                self.buffer.buffer_list[i].add_data(state_t=data, action_t=action, reward_t=reward,
+                                                    terminal_t=done, q=q.view(1, -1))
+            else:
+                self.buffer.buffer_list[i].add_data(state_t=data, action_t=action, reward_t=reward,
+                                                    terminal_t=done, value_t=value, log_prob_t=log_prob)
             if done:
                 break
 
@@ -173,28 +180,41 @@ class Trainer:
             data = Data(x=data, edge_index=edge_index, num_nodes=len(data))
             _, value, _ = self.model(data)
             buffer.value_list.append(value.view(1, 1).detach().to(device))
-        buffer.compute_reward_to_go_returns_adv()
+        if self.policy != "dqn":
+            buffer.compute_reward_to_go_returns_adv()
         self.sum_reward.append(np.sum(buffer.reward_list))
 
     def choose_action(self, data, env):
+        if self.policy == "dqn":
+            logits, prob = self.model(data)
+            mask = (env.state[:, 4] == 1)
+            mask = torch.from_numpy(mask).to(device).view(1, -1)
+            # 将无效动作对应的概率值设置为0
+            masked_probs = prob * mask
 
-        prob, value, log_probs = self.model(data)
+            # 将有效动作的概率值归一化
+            valid_probs = masked_probs / masked_probs.sum(dim=1)
 
-        mask = (env.state[:, 4] == 1)
-        mask = torch.from_numpy(mask).to(device).view(1, -1)
-        # 将无效动作对应的概率值设置为0
-        masked_probs = prob * mask
+            action = torch.argmax(valid_probs, dim=1)
+            q = logits[0][action]
+            return action.item(), q, 0
+        else:
+            prob, value, log_probs = self.model(data)
+            mask = (env.state[:, 4] == 1)
+            mask = torch.from_numpy(mask).to(device).view(1, -1)
+            # 将无效动作对应的概率值设置为0
+            masked_probs = prob * mask
 
-        # 将有效动作的概率值归一化
-        valid_probs = masked_probs / masked_probs.sum(dim=1)
+            # 将有效动作的概率值归一化
+            valid_probs = masked_probs / masked_probs.sum(dim=1)
 
-        policy_head = Categorical(probs=valid_probs.view(1, -1))
-        # action = policy_head.sample()
-        action = torch.argmax(valid_probs, dim=1)
+            policy_head = Categorical(probs=valid_probs.view(1, -1))
+            # action = policy_head.sample()
+            action = torch.argmax(valid_probs, dim=1)
 
-        # log_prob = log_probs.view(self.jobs,)[action]
+            # log_prob = log_probs.view(self.jobs,)[action]
 
-        return action.item(), value, policy_head.log_prob(action)
+            return action.item(), value, policy_head.log_prob(action)
 
     def save_model(self, file_name):
         # torch.save(self.model.actor.state_dict(), f'./net/params/actor.pth')
@@ -215,7 +235,7 @@ class Trainer:
     def save_info(self, data_list, file_name, headers, path):
         with open(f'./data/{path}/{file_name}.csv', mode='a+', encoding='utf-8-sig', newline='') as f:
             csv_writer = csv.writer(f)
-            if (self.episode+1) == 5:
+            if (self.episode + 1) == 5:
                 csv_writer.writerow(headers)
             csv_writer.writerows(data_list)
             # print(f'{file_name}')

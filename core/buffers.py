@@ -16,6 +16,7 @@ class Buffer:
         self.reward_list = []
         self.terminal_list = []
         self.value_list = []
+        self.q_list = []
         self.log_prob_list = []
         self.candidate_list = []
         self.adv = None
@@ -25,17 +26,19 @@ class Buffer:
         self.log_prob = None
 
     def add_data(self, state_t=None, action_t=None, reward_t=None,
-                 terminal_t=None, value_t=None, log_prob_t=None):
+                 terminal_t=None, value_t=None, log_prob_t=None, q=None):
 
         self.state_list.append(state_t)
         # self.candidate_list.append(candidate)
         # self.edge_list.append(edge_t)
-        # self.edge_attr_list.append(edge_attr_t)
+        self.q_list.append(q)
         self.action_list.append(action_t)
         self.reward_list.append(reward_t)
         self.terminal_list.append(terminal_t)
-        self.value_list.append(value_t.detach())
-        self.log_prob_list.append(log_prob_t.detach())
+        if value_t is not None:
+            self.value_list.append(value_t.detach())
+        if log_prob_t is not None:
+            self.log_prob_list.append(log_prob_t.detach())
 
     def compute_reward_to_go_returns_adv(self):
         """

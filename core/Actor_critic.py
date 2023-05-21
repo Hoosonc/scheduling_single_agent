@@ -11,3 +11,6 @@ class AC_update:
         self.args = args
         self.device = device
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.args.lr_v)
+
+    def learn(self, param):
+        pass

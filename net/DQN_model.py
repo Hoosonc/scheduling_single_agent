@@ -23,10 +23,10 @@ class DQN(torch.nn.Module):
         self.jobs = jobs
         self.machines = machines
 
-        self.conv1 = GATConv(in_channels=4, out_channels=4, heads=4)
-        self.Norm1 = nn.BatchNorm1d(16)
+        self.conv1 = GATConv(in_channels=4, out_channels=16, heads=4)
+        self.Norm1 = nn.BatchNorm1d(64)
 
-        self.conv2 = GATConv(in_channels=16, out_channels=16, heads=4)
+        self.conv2 = GATConv(in_channels=64, out_channels=16, heads=4)
         self.Norm2 = nn.BatchNorm1d(64)
 
         self.conv3 = GATConv(in_channels=64, out_channels=32, heads=1)
@@ -46,4 +46,4 @@ class DQN(torch.nn.Module):
         logits = torch.tanh(actor).view(1, -1)
         prob = f.softmax(logits, dim=1)
 
-        return prob
+        return logits, prob
