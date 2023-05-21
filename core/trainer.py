@@ -13,7 +13,8 @@ from torch.distributions.categorical import Categorical
 # import gc
 # import torch.optim as opt
 import csv
-from net.gcn import GCN
+from net.AC_model import AC
+from net.DQN_model import DQN
 # from multiprocessing import Queue
 from threading import Thread
 # from multiprocessing import Process
@@ -32,13 +33,17 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class Trainer:
     def __init__(self, args):
         self.args = args
+        self.policy = args.policy
         torch.manual_seed(args.seed)
         self.envs = [Environment(args) for _ in range(args.env_num)]
         for env in self.envs:
             env.reset()
         self.jobs = self.envs[0].jobs
         self.machines = self.envs[0].machines
-        self.model = GCN(self.machines, self.machines).to(device)
+        if self.policy == "dqn":
+            self.model = DQN(self.machines, self.machines).to(device)
+        else:
+            self.model = AC(self.machines, self.machines).to(device)
 
         self.ppo = PPOClip(self.model, device, args)
         self.total_time = 0
@@ -62,7 +67,7 @@ class Trainer:
         # env = self.env
         n = 0
         for episode in range(self.args.episode):
-            decay_episode = (20 * (2**n))
+            decay_episode = (50 * (2**n))
             if episode == decay_episode:
                 self.scheduler.step()
                 n += 1
@@ -111,7 +116,7 @@ class Trainer:
             if episode % 1 == 0:
                 print("loss:", loss.item())
                 print("d_idle:", d_idle)
-                print("mean_reward:", self.sum_reward[0], episode)
+                print("sum_reward:", self.sum_reward[0], episode)
             if (episode+1) % 100 == 0:
                 self.episode = episode
                 self.save_model(self.model_name)
@@ -163,7 +168,7 @@ class Trainer:
             _, value, _ = self.model(data)
             buffer.value_list.append(value.view(1, 1).detach().to(device))
         buffer.compute_reward_to_go_returns_adv()
-        self.sum_reward.append(buffer.reward_list[-1])
+        self.sum_reward.append(np.sum(buffer.reward_list))
 
     def choose_action(self, data, env):
 

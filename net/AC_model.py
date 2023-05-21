@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2022/11/16 15:59
 # @Author  : hxc
-# @File    : gcn.py
+# @File    : AC_model.py
 # @Software: PyCharm
 # import numpy as np
 import torch
@@ -21,9 +21,9 @@ from torch.distributions.categorical import Categorical
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class GCN(torch.nn.Module):
+class AC(torch.nn.Module):
     def __init__(self, jobs, machines):
-        super(GCN, self).__init__()
+        super(AC, self).__init__()
         # torch.manual_seed(2022)
         self.jobs = jobs
         self.machines = machines
