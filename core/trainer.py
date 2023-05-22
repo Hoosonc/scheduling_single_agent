@@ -28,6 +28,7 @@ from core.buffers import BatchBuffer
 from core.rl_algorithms import PPOClip
 from core.DQN import DQN_update
 from core.Actor_critic import AC_update
+from net.AC_GCN import AC_GCN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -47,7 +48,12 @@ class Trainer:
             self.model = DQN(self.machines, self.machines).to(device)
             self.algorithm = DQN_update(self.model, device, self.args)
         else:
-            self.model = AC(self.machines, self.machines).to(device)
+            net = "GCN"
+            if net == "GCN":
+                self.model = AC_GCN(self.machines, self.machines).to(device)
+            elif net == "GAT":
+                self.model = AC(self.machines, self.machines).to(device)
+
             if self.policy == "ppo":
                 self.algorithm = PPOClip(self.model, device, args)
             else:
@@ -117,10 +123,10 @@ class Trainer:
 
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())
-            if episode % 1 == 0:
-                print("loss:", loss.item())
-                print("d_idle:", d_idle)
-                print("sum_reward:", self.sum_reward[0], episode)
+            # if episode % 1 == 0:
+            #     print("loss:", loss.item())
+            #     print("d_idle:", d_idle)
+            #     print("sum_reward:", self.sum_reward[0], episode)
             if (episode + 1) % 5 == 0:
                 self.episode = episode
                 self.save_model(self.model_name)

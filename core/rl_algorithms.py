@@ -23,10 +23,10 @@ class PPOClip:
     def learn(self, buffer):
 
         value_batch, log_prob_batch, entropy = self.net.get_batch_p_v(buffer)
-        return_batch = buffer.returns
-        old_log_prob_batch = buffer.log_prob_list
-        adv_batch = buffer.adv
-        old_value_batch = buffer.value_list
+        return_batch = buffer.returns.detach()
+        old_log_prob_batch = buffer.log_prob_list.detach()
+        adv_batch = buffer.adv.detach()
+        old_value_batch = buffer.value_list.detach()
         # todo: not mentioned in paper, but used in openai baselines
         self.value_loss_clip(value_batch, return_batch, old_value_batch)
         # self.value_loss(value_batch, return_batch)
