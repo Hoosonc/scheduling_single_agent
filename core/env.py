@@ -60,7 +60,7 @@ class Environment:
     def reset(self, ep):
         if (ep+1) % 100 == 0:
             (self.all_job_list, self.jobs, self.machines,
-             self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(self.args.reg_path, 300, 10)
+             self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv((ep+1), 300, 10)
         self.state = self.all_job_list.copy()
         self.state = np.concatenate([self.state, np.ones((self.state.shape[0], 1))], axis=1)  # 添加“是否处理”
         self.state = np.concatenate([self.state, np.zeros((self.state.shape[0], 2))], axis=1)  # add “开始时间” 和 ”最早开始时间“

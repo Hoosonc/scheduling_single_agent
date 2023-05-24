@@ -22,7 +22,8 @@ def distance_d(doc_num, file_name):
     dis_arr.to_csv(f"../data/{file_name}.csv", index=False, header=None)
 
 
-def gen_data(num_patients, num_doctors):
+def gen_data(ep, num_patients, num_doctors):
+    np.random.seed(ep)
     multi_reg_patient_num = int(num_patients*0.1)
     multi_3 = np.random.choice(a=num_patients, size=multi_reg_patient_num, replace=False)
     multi_2 = np.random.choice(a=multi_3, size=2, replace=False)

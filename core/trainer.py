@@ -81,11 +81,13 @@ class Trainer:
             self.sum_reward = []
             t_list = []
             for i in range(self.args.env_num):
-                t = Thread(target=self.step, args=(self.envs[i], i))
-                t.start()
-                t_list.append(t)
-            for thread in t_list:
-                thread.join()
+                self.step(self.envs[i], i)
+            # for i in range(self.args.env_num):
+            #     t = Thread(target=self.step, args=(self.envs[i], i))
+            #     t.start()
+            #     t_list.append(t)
+            # for thread in t_list:
+            #     thread.join()
             idle_total_list = []
             for env in self.envs:
                 p_idle = np.sum(env.p_total_idle_time)
