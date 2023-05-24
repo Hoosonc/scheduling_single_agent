@@ -23,7 +23,7 @@ class Environment:
         # (self.all_job_list, self.jobs, self.machines,
         #  self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_txt(args.reg_path)
         (self.all_job_list, self.jobs, self.machines,
-         self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(args.reg_path)
+         self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(args.reg_path, 300, 10)
         self.reg_num = self.all_job_list.shape[0]
         self.j_edge_matrix = None
         self.m_edge_matrix = None
@@ -36,7 +36,6 @@ class Environment:
         self.d_total_idle_time = None
         self.p_total_idle_time = None
 
-        self.reg_detail = None
         self.done = False
         self.pos = []
         self.hole_total_time = 0.
@@ -58,8 +57,10 @@ class Environment:
         self.reward = None
         self.idle_total = []
 
-    def reset(self):
-
+    def reset(self, ep):
+        if (ep+1) % 100 == 0:
+            (self.all_job_list, self.jobs, self.machines,
+             self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(self.args.reg_path, 300, 10)
         self.state = self.all_job_list.copy()
         self.state = np.concatenate([self.state, np.ones((self.state.shape[0], 1))], axis=1)  # 添加“是否处理”
         self.state = np.concatenate([self.state, np.zeros((self.state.shape[0], 2))], axis=1)  # add “开始时间” 和 ”最早开始时间“

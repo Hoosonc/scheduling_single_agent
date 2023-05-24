@@ -40,11 +40,11 @@ class Trainer:
         torch.manual_seed(args.seed)
         self.envs = [Environment(args) for _ in range(args.env_num)]
         for env in self.envs:
-            env.reset()
+            env.reset(0)
         self.jobs = self.envs[0].jobs
         self.machines = self.envs[0].machines
         self.algorithm = None
-        self.net_name = "GCN"
+        self.net_name = "GAT"
         if self.policy == "dqn":
             self.model = DQN(self.machines, self.machines).to(device)
             self.algorithm = DQN_update(self.model, device, self.args)
@@ -97,7 +97,7 @@ class Trainer:
                 idle_total_list.append(p_idle)
                 idle_total_list.append(total_idle_time)
 
-                env.reset()
+                env.reset(episode)
             idle_total_list.append(episode)
             self.idle_total.append(idle_total_list)
 

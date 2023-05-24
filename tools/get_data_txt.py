@@ -5,10 +5,12 @@
 # @Software: PyCharm
 import numpy as np
 import pandas as pd
+from tools.gen_data import gen_data
 
 
-def get_data_csv(path):
-    df = pd.read_csv(path)
+def get_data_csv(path, num_patients, num_doctors):
+    # df = pd.read_csv(path)
+    df = gen_data(num_patients, num_doctors)
     df = df.sort_values("did")
     df["id"] = [i for i in range(df.shape[0])]
     max_time_op = 0
