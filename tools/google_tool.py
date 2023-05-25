@@ -6,6 +6,8 @@
 
 """Minimal jobshop example."""
 import collections
+import os
+
 from tools.check_time import check_time
 import numpy as np
 from ortools.sat.python import cp_model
@@ -131,8 +133,14 @@ def main(i, path):
 
 
 if __name__ == '__main__':
-    d_idle_list = []
-    for i in range(100):
-        d_idle = main(i, "../data/10_300_358.csv")
-        d_idle_list.append(d_idle)
-    print(np.mean(d_idle_list))
+    files = os.listdir("../data/simulation_instances")
+    for file in files:
+        d_idle_list = []
+        for i in range(100):
+            d_idle = main(i, f"../data/simulation_instances/{file}")
+            d_idle_list.append(d_idle)
+        print(file)
+        print("Mean:", np.mean(d_idle_list))
+        print("Std:", np.std(d_idle_list))
+        confidence_interval = np.percentile(np.array(d_idle_list), [2.5, 97.5])
+        print("Confidence interval（95%）:", confidence_interval)
