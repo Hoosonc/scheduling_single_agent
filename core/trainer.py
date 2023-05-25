@@ -60,7 +60,7 @@ class Trainer:
             else:
                 self.algorithm = AC_update(self.model, device, self.args)
 
-        self.scheduler = StepLR(self.algorithm.optimizer, step_size=500, gamma=0.1)
+        self.scheduler = StepLR(self.algorithm.optimizer, step_size=500, gamma=0.5)
 
         self.scheduled_data = []
         self.file_name = ""
