@@ -60,7 +60,7 @@ class Trainer:
             else:
                 self.algorithm = AC_update(self.model, device, self.args)
 
-        self.scheduler = StepLR(self.algorithm.optimizer, step_size=1000, gamma=0.5)
+        self.scheduler = StepLR(self.algorithm.optimizer, step_size=500, gamma=0.1)
 
         self.scheduled_data = []
         self.file_name = ""
@@ -123,7 +123,8 @@ class Trainer:
             # self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
             self.r_l.append([self.sum_reward[0], loss.item(), episode])
 
-            self.scheduler.step()
+            if episode < 5000:
+                self.scheduler.step()
 
             # print("episode:", episode)
             # print("总时间：", self.env.get_total_time())

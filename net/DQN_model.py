@@ -20,15 +20,15 @@ class DQN(torch.nn.Module):
     def __init__(self):
         super(DQN, self).__init__()
 
-        self.conv1 = GATConv(in_channels=4, out_channels=16, heads=4)
-        self.Norm1 = nn.BatchNorm1d(64)
+        self.conv1 = GATConv(in_channels=4, out_channels=128, heads=4, concat=False)
+        self.Norm1 = nn.BatchNorm1d(128)
 
-        self.conv2 = GATConv(in_channels=64, out_channels=16, heads=4)
+        self.conv2 = GATConv(in_channels=128, out_channels=64, heads=4, concat=False)
         self.Norm2 = nn.BatchNorm1d(64)
 
-        self.conv3 = GATConv(in_channels=64, out_channels=32, heads=1)
+        self.conv3 = GATConv(in_channels=64, out_channels=32, heads=4, concat=False)
         self.Norm3 = nn.BatchNorm1d(32)
-        self.conv4 = GATConv(in_channels=32, out_channels=1, heads=1)
+        self.conv4 = GATConv(in_channels=32, out_channels=1, heads=4, concat=False)
 
     def forward(self, data):
 
