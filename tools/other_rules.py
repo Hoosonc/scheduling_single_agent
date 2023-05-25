@@ -10,7 +10,8 @@ import pandas as pd
 from sklearn.utils import shuffle
 import csv
 
-from tools.check_time import check_time
+# from tools.check_time import check_time
+from check_time import check_time
 
 
 class Rules:
