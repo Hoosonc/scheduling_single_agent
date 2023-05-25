@@ -136,11 +136,11 @@ class Trainer:
                 self.episode = episode
                 self.save_model(self.model_name)
 
-                # self.save_info(self.r_l, f"r_l_{self.model_name}",
-                #                ['reward1', 'loss', 'ep'], "r_l")
+                self.save_info(self.r_l, f"r_l_{self.model_name}",
+                               ['reward', 'loss', 'ep'], "r_l")
 
-                # self.save_info(self.idle_total, f"i_t_{self.model_name}",
-                #                ['d_idle', 'p_idle', 'idle', 'ep'], "i_t")
+                self.save_info(self.idle_total, f"i_t_{self.model_name}",
+                               ['d_idle', 'p_idle', 'idle', 'ep'], "i_t")
                 self.r_l = []
                 self.idle_total = []
 
