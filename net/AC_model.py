@@ -26,10 +26,10 @@ class AC(torch.nn.Module):
         super(AC, self).__init__()
         # torch.manual_seed(2022)
 
-        self.conv1 = GATConv(in_channels=4, out_channels=32, heads=4, concat=False)
-        self.Norm1 = nn.BatchNorm1d(32)
+        self.conv1 = GATConv(in_channels=4, out_channels=128, heads=4, concat=False)
+        self.Norm1 = nn.BatchNorm1d(128)
 
-        self.conv2 = GATConv(in_channels=32, out_channels=64, heads=4, concat=False)
+        self.conv2 = GATConv(in_channels=128, out_channels=64, heads=4, concat=False)
         self.Norm2 = nn.BatchNorm1d(64)
 
         self.conv3 = GATConv(in_channels=64, out_channels=32, heads=4, concat=False)
@@ -39,11 +39,11 @@ class AC(torch.nn.Module):
         self.critic = nn.Sequential(
             Linear(64, 32),
             nn.LayerNorm(32),
-            nn.Dropout(),
+            # nn.Dropout(),
             nn.ReLU(),
             Linear(32, 16),
             nn.LayerNorm(16),
-            nn.Dropout(),
+            # nn.Dropout(),
             nn.ReLU(),
             Linear(16, 1)
         )
