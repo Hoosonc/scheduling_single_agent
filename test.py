@@ -41,5 +41,5 @@ def transition_time():
 
 
 if __name__ == '__main__':
-    a = 0.9
-    print(a**50)
+    a = np.random.permutation([2, 3, 8, 10])
+    print(a)

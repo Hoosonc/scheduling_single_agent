@@ -23,7 +23,7 @@ def distance_d(doc_num, file_name):
 
 
 def gen_data(ep, num_patients, num_doctors):
-    np.random.seed(ep)
+    np.random.seed(int(ep))
     multi_reg_patient_num = int(num_patients*0.1)
     multi_3 = np.random.choice(a=num_patients, size=multi_reg_patient_num, replace=False)
     multi_2 = np.random.choice(a=multi_3, size=2, replace=False)
@@ -33,20 +33,45 @@ def gen_data(ep, num_patients, num_doctors):
     multi_3 = multi_3[mask]
     all_reg_list = []
     doc_reg_num = np.zeros((num_doctors,))
-    did_list = [i for i in range(num_doctors)]
-    for i in range(num_patients):
-        if i in multi_3:
-            size = 3
-        elif i in multi_2:
-            size = 2
-        else:
-            size = 1
-        d_idx = np.random.choice(a=did_list, size=size, replace=False)
+    d_list = [i for i in range(num_doctors)]
+
+    for pid in multi_3:
+        np.random.seed(int(pid))
+        # did_list = np.random.permutation(d_list)
+        d_idx = np.random.choice(a=d_list, size=3, replace=False)
+
         for d in d_idx:
-            all_reg_list.append([i, d, random.randint(5, 10)])
+            all_reg_list.append([pid, d, random.randint(5, 10)])
             doc_reg_num[d] += 1
-            if doc_reg_num[d] == 37:
-                did_list.remove(d)
+            if doc_reg_num[d] == 36:
+                d_list.remove(d)
+
+    for pid in multi_2:
+        np.random.seed(int(pid))
+        # did_list = np.random.permutation(d_list)
+        d_idx = np.random.choice(a=d_list, size=2, replace=False)
+
+        for d in d_idx:
+            all_reg_list.append([pid, d, random.randint(5, 10)])
+            doc_reg_num[d] += 1
+            if doc_reg_num[d] == 36:
+                d_list.remove(d)
+
+    for i in range(num_patients):
+        np.random.seed(int(i))
+
+        if i in multi_3:
+            continue
+        elif i in multi_2:
+            continue
+        else:
+            d_idx = np.random.choice(a=d_list, size=1, replace=False)
+
+            for d in d_idx:
+                all_reg_list.append([i, d, random.randint(5, 10)])
+                doc_reg_num[d] += 1
+                if doc_reg_num[d] == 36:
+                    d_list.remove(d)
     df = pd.DataFrame(data=all_reg_list, columns=["pid", "did", "pro_time"])
     # df.to_csv(f"../data/{num_doctors}_{num_patients}_{len(all_reg_list)}.csv", index=False)
     return df
@@ -54,7 +79,8 @@ def gen_data(ep, num_patients, num_doctors):
 
 if __name__ == '__main__':
     # distance_d(10, "distance")
-    gen_data(300, 10)
+    for i in range(0, 10000, 100):
+        gen_data(i, 300, 10)
     # doctors = gen_doctors()
     # doc_header = ['did', 'reg_num', 'start_time', 'avg_pro_time']
     # save_data(doc_header, doctors, "doc_am")

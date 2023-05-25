@@ -23,7 +23,7 @@ class Environment:
         # (self.all_job_list, self.jobs, self.machines,
         #  self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_txt(args.reg_path)
         (self.all_job_list, self.jobs, self.machines,
-         self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(args.reg_path, 300, 10)
+         self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(0, 300, 10)
         self.reg_num = self.all_job_list.shape[0]
         self.j_edge_matrix = None
         self.m_edge_matrix = None
