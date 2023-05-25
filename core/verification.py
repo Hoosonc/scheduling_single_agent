@@ -1,0 +1,198 @@
+# -*- coding: utf-8 -*-
+# @Time    : 2023/5/25 18:17
+# @Author  : hxc
+# @File    : verification.py
+# @Software: PyCharm
+from core.env import Environment
+import numpy as np
+import torch
+from torch.distributions.categorical import Categorical
+# import gc
+# import torch.optim as opt
+import csv
+from net.AC_model import AC
+from net.DQN_model import DQN
+# from multiprocessing import Queue
+from threading import Thread
+# from multiprocessing import Process
+from torch.optim.lr_scheduler import StepLR
+# from net.cnn import CNN
+# from net.gcn_new import GCN
+# from net.utils import get_now_date as hxc
+from torch_geometric.data import Data
+from scipy.sparse import coo_matrix
+from core.buffers import BatchBuffer
+from core.rl_algorithms import PPOClip
+from core.DQN import DQN_update
+from core.Actor_critic import AC_update
+from net.AC_GCN import AC_GCN
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+class Trainer:
+    def __init__(self, args):
+        self.args = args
+        self.policy = args.policy
+        torch.manual_seed(args.seed)
+        self.envs = [Environment(args) for _ in range(10)]
+        for env in self.envs:
+            env.reset(0)
+        self.jobs = self.envs[0].jobs
+        self.machines = self.envs[0].machines
+        self.algorithm = None
+        self.net_name = "GAT"
+        if self.policy == "dqn":
+            self.model = DQN().to(device)
+        else:
+
+            if self.net_name == "GCN":
+                self.model = AC_GCN(self.machines, self.machines).to(device)
+            elif self.net_name == "GAT":
+                self.model = AC().to(device)
+
+        self.scheduled_data = []
+        self.file_name = ""
+        self.reward_list = []
+        self.terminal_list = []
+        self.r_l = []
+        self.idle_total = []
+        self.episode = 0
+        self.sum_reward = []
+        # self.model_name = f"{self.jobs}_{self.machines}"
+        self.model_name = f"300_10_ppo_GAT"
+        self.load_params(self.model_name)
+
+        self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
+
+    def train(self):
+        for episode in range(10):
+
+            self.sum_reward = []
+            t_list = []
+            # for i in range(self.args.env_num):
+            #     self.step(self.envs[i], i)
+            for i in range(self.args.env_num):
+                t = Thread(target=self.step, args=(self.envs[i], i))
+                t.start()
+                t_list.append(t)
+            for thread in t_list:
+                thread.join()
+            idle_total_list = []
+            for env in self.envs:
+                p_idle = np.sum(env.p_total_idle_time)
+                d_idle = np.sum(env.d_total_idle_time)
+
+                total_idle_time = int(p_idle + d_idle)
+                # total_time = env.d_total_time + env.p_total_time
+                idle_total_list.append(d_idle)
+                idle_total_list.append(p_idle)
+                idle_total_list.append(total_idle_time)
+
+                env.reset(episode)
+            idle_total_list.append(episode)
+            self.idle_total.append(idle_total_list)
+
+            # update net
+            if self.policy == "dqn":
+                loss = self.algorithm.learn(self.buffer)
+            else:
+                if self.policy == "ppo":
+                    self.buffer.get_data()
+
+                    mini_buffer = self.buffer.get_mini_batch(self.args.mini_size, self.args.update_num)
+                    loss = 0
+                    for i in range(0, self.args.update_num):
+                        # self.env.reset()
+                        buf = mini_buffer[i]
+                        loss = self.algorithm.learn(buf)
+                else:
+                    loss = self.algorithm.learn(self.buffer.buffer_list[0])
+            self.buffer.reset()
+
+            # self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
+            self.r_l.append([self.sum_reward[0], loss.item(), episode])
+
+    def step(self, env, i):
+        buffer = self.buffer.buffer_list[i]
+        done = False
+        for step in range(self.jobs * self.machines * 5):
+            data = env.state[:, [2, 4, 5, 6]].copy()
+            data[:, [0, 2, 3]] = data[:, [0, 2, 3]] / (env.jobs_length.mean()*2)
+            m_edge_index = coo_matrix(env.m_edge_matrix)
+            m_edge_index = np.array([m_edge_index.row, m_edge_index.col])
+            np.fill_diagonal(env.j_edge_matrix, 0)
+            j_edge_index = coo_matrix(env.j_edge_matrix)
+            j_edge_index = np.array([j_edge_index.row, j_edge_index.col])
+            edge_index = np.concatenate([m_edge_index, j_edge_index], axis=1)
+            data = torch.tensor(data, dtype=torch.float32).to(device)
+            edge_index = torch.tensor(edge_index.astype("int64")).to(device)
+            # candidate = torch.tensor(env.candidate.copy().astype("int64")).to(device)
+            data = Data(x=data, edge_index=edge_index, num_nodes=len(data))
+            if self.policy == "dqn":
+                value, log_prob = 0, 0
+                action, q, _ = self.choose_action(data, env)
+            else:
+                q = 0
+                action, value, log_prob = self.choose_action(data, env)
+
+            done, reward = env.step(action, step)
+            if self.policy == "dqn":
+                self.buffer.buffer_list[i].add_data(state_t=data, action_t=action, reward_t=reward,
+                                                    terminal_t=done, q=q.view(1, -1))
+            else:
+                self.buffer.buffer_list[i].add_data(state_t=data, action_t=action, reward_t=reward,
+                                                    terminal_t=done, value_t=value, log_prob_t=log_prob)
+            if done:
+                break
+
+        if done:
+            buffer.value_list.append(torch.tensor([0]).view(1, 1).to(device))
+        else:
+            data = env.state
+            edge_index = coo_matrix(env.edge_matrix)
+            edge_index = np.array([edge_index.row, edge_index.col])
+            data = torch.tensor(data, dtype=torch.float32).to(device)
+            edge_index = torch.tensor(edge_index.astype("int64")).to(device)
+
+            data = Data(x=data, edge_index=edge_index, num_nodes=len(data))
+            _, value, _ = self.model(data)
+            buffer.value_list.append(value.view(1, 1).detach().to(device))
+        if self.policy != "dqn":
+            buffer.compute_reward_to_go_returns_adv()
+        self.sum_reward.append(np.sum(buffer.reward_list))
+
+    def choose_action(self, data, env):
+        if self.policy == "dqn":
+            logits, prob = self.model(data)
+            mask = (env.state[:, 4] == 1)
+            mask = torch.from_numpy(mask).to(device).view(1, -1)
+            # 将无效动作对应的概率值设置为0
+            masked_probs = prob * mask
+
+            # 将有效动作的概率值归一化
+            valid_probs = masked_probs / masked_probs.sum(dim=1)
+
+            action = torch.argmax(valid_probs, dim=1)
+            q = logits[0][action]
+            return action.item(), q, 0
+        else:
+            prob, value, log_probs = self.model(data)
+            mask = (env.state[:, 4] == 1)
+            mask = torch.from_numpy(mask).to(device).view(1, -1)
+            # 将无效动作对应的概率值设置为0
+            masked_probs = prob * mask
+
+            # 将有效动作的概率值归一化
+            valid_probs = masked_probs / masked_probs.sum(dim=1)
+
+            policy_head = Categorical(probs=valid_probs.view(1, -1))
+            # action = policy_head.sample()
+            action = torch.argmax(valid_probs, dim=1)
+
+            # log_prob = log_probs.view(self.jobs,)[action]
+
+            return action.item(), value, policy_head.log_prob(action)
+
+    def load_params(self, model_name):
+        self.model.load_state_dict(torch.load(f"./net/params/{model_name}.pth"))
