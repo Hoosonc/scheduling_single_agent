@@ -73,7 +73,7 @@ def gen_data(ep, num_patients, num_doctors):
                 if doc_reg_num[d] == 36:
                     d_list.remove(d)
     df = pd.DataFrame(data=all_reg_list, columns=["pid", "did", "pro_time"])
-    df.to_csv(f"../data/simulation_instances/{num_doctors}_{num_patients}_{len(all_reg_list)}.csv", index=False)
+    # df.to_csv(f"../data/simulation_instances/{num_doctors}_{num_patients}_{len(all_reg_list)}.csv", index=False)
     return df
 
 

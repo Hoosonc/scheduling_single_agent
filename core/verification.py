@@ -5,8 +5,8 @@
 # @Software: PyCharm
 import os
 
-from core.params import Params
-from core.verification_env import Environment
+from params import Params
+from verification_env import Environment
 import numpy as np
 import torch
 from torch.distributions.categorical import Categorical
@@ -18,16 +18,14 @@ from net.DQN_model import DQN
 # from multiprocessing import Queue
 from threading import Thread
 # from multiprocessing import Process
-from torch.optim.lr_scheduler import StepLR
+
 # from net.cnn import CNN
 # from net.gcn_new import GCN
 # from net.utils import get_now_date as hxc
 from torch_geometric.data import Data
 from scipy.sparse import coo_matrix
-from core.buffers import BatchBuffer
-from core.rl_algorithms import PPOClip
-from core.DQN import DQN_update
-from core.Actor_critic import AC_update
+from buffers import BatchBuffer
+
 from net.AC_GCN import AC_GCN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -61,7 +59,7 @@ class Trainer:
         self.episode = 0
         self.sum_reward = []
         # self.model_name = f"{self.jobs}_{self.machines}"
-        self.model_name = f"300_10_ppo_GAT"
+        self.model_name = f"300_10_AC_GAT"
         self.load_params(self.model_name)
 
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
@@ -75,8 +73,8 @@ class Trainer:
             for episode in range(10):
                 self.sum_reward = []
                 t_list = []
-                for i in range(self.args.env_num):
-                    t = Thread(target=self.step, args=(self.envs[i], i))
+                for j in range(self.args.env_num):
+                    t = Thread(target=self.step, args=(self.envs[j], j))
                     t.start()
                     t_list.append(t)
                 for thread in t_list:
@@ -93,7 +91,7 @@ class Trainer:
             print("Mean:", np.mean(idle_list))
             print("Std:", np.std(idle_list))
             confidence_interval = np.percentile(np.array(idle_list), [2.5, 97.5])
-            print("Confidence interval（95%）:", confidence_interval)
+            print("CI:", confidence_interval)
 
     def step(self, env, i):
         for step in range(100000):
@@ -153,7 +151,7 @@ class Trainer:
             return action.item(), value, policy_head.log_prob(action)
 
     def load_params(self, model_name):
-        self.model.load_state_dict(torch.load(f"./net/params/{model_name}.pth"))
+        self.model.load_state_dict(torch.load(f"../net/params/{model_name}.pth"))
 
 
 if __name__ == '__main__':
