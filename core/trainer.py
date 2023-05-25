@@ -46,14 +46,14 @@ class Trainer:
         self.algorithm = None
         self.net_name = "GAT"
         if self.policy == "dqn":
-            self.model = DQN(self.machines, self.machines).to(device)
+            self.model = DQN().to(device)
             self.algorithm = DQN_update(self.model, device, self.args)
         else:
 
             if self.net_name == "GCN":
                 self.model = AC_GCN(self.machines, self.machines).to(device)
             elif self.net_name == "GAT":
-                self.model = AC(self.machines, self.machines).to(device)
+                self.model = AC().to(device)
 
             if self.policy == "ppo":
                 self.algorithm = PPOClip(self.model, device, args)
@@ -79,7 +79,7 @@ class Trainer:
         for episode in range(self.args.episode):
 
             self.sum_reward = []
-            t_list = []
+            # t_list = []
             for i in range(self.args.env_num):
                 self.step(self.envs[i], i)
             # for i in range(self.args.env_num):
@@ -109,6 +109,7 @@ class Trainer:
             else:
                 if self.policy == "ppo":
                     self.buffer.get_data()
+
                     mini_buffer = self.buffer.get_mini_batch(self.args.mini_size, self.args.update_num)
                     loss = 0
                     for i in range(0, self.args.update_num):
@@ -133,14 +134,12 @@ class Trainer:
             if (episode + 1) % 5 == 0:
                 self.episode = episode
                 self.save_model(self.model_name)
+
                 # self.save_info(self.r_l, f"r_l_{self.model_name}",
-                #                ['reward1', 'reward2', 'loss', 'ep'], "r_l")
-                self.save_info(self.r_l, f"r_l_{self.model_name}",
-                               ['reward1', 'loss', 'ep'], "r_l")
+                #                ['reward1', 'loss', 'ep'], "r_l")
+
                 # self.save_info(self.idle_total, f"i_t_{self.model_name}",
-                #                ['d_idle', 'p_idle', 'idle', 'd_idle2', 'p_idle2', 'idle2', 'ep'], "i_t")
-                self.save_info(self.idle_total, f"i_t_{self.model_name}",
-                               ['d_idle', 'p_idle', 'idle', 'ep'], "i_t")
+                #                ['d_idle', 'p_idle', 'idle', 'ep'], "i_t")
                 self.r_l = []
                 self.idle_total = []
 
@@ -148,8 +147,8 @@ class Trainer:
         buffer = self.buffer.buffer_list[i]
         done = False
         for step in range(self.jobs * self.machines * 5):
-            data = env.state[:, [2, 4, 5, 6]]
-
+            data = env.state[:, [2, 4, 5, 6]].copy()
+            data[:, [0, 2, 3]] = data[:, [0, 2, 3]] / (env.jobs_length.mean()*2)
             m_edge_index = coo_matrix(env.m_edge_matrix)
             m_edge_index = np.array([m_edge_index.row, m_edge_index.col])
             np.fill_diagonal(env.j_edge_matrix, 0)

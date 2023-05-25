@@ -17,11 +17,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class DQN(torch.nn.Module):
-    def __init__(self, jobs, machines):
+    def __init__(self):
         super(DQN, self).__init__()
-        # torch.manual_seed(2022)
-        self.jobs = jobs
-        self.machines = machines
 
         self.conv1 = GATConv(in_channels=4, out_channels=16, heads=4)
         self.Norm1 = nn.BatchNorm1d(64)
