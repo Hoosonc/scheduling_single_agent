@@ -21,11 +21,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class AC_GCN(torch.nn.Module):
-    def __init__(self, jobs, machines):
+    def __init__(self):
         super(AC_GCN, self).__init__()
-        # torch.manual_seed(2022)
-        self.jobs = jobs
-        self.machines = machines
 
         self.conv1 = GCNConv(in_channels=4, out_channels=32)
         self.Norm1 = nn.BatchNorm1d(32)

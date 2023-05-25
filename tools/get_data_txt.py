@@ -8,9 +8,11 @@ import pandas as pd
 from tools.gen_data import gen_data
 
 
-def get_data_csv(ep, num_patients, num_doctors):
-    # df = pd.read_csv(path)
-    df = gen_data(ep, num_patients, num_doctors)
+def get_data_csv(ep, num_patients, num_doctors, path=None):
+    if path is not None:
+        df = pd.read_csv(path)
+    else:
+        df = gen_data(ep, num_patients, num_doctors)
     df = df.sort_values("did")
     df["id"] = [i for i in range(df.shape[0])]
     max_time_op = 0

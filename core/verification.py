@@ -3,7 +3,10 @@
 # @Author  : hxc
 # @File    : verification.py
 # @Software: PyCharm
-from core.env import Environment
+import os
+
+from core.params import Params
+from core.verification_env import Environment
 import numpy as np
 import torch
 from torch.distributions.categorical import Categorical
@@ -34,12 +37,10 @@ class Trainer:
     def __init__(self, args):
         self.args = args
         self.policy = args.policy
+        self.files = os.listdir("../data/simulation_instances")
         torch.manual_seed(args.seed)
         self.envs = [Environment(args) for _ in range(10)]
-        for env in self.envs:
-            env.reset(0)
-        self.jobs = self.envs[0].jobs
-        self.machines = self.envs[0].machines
+
         self.algorithm = None
         self.net_name = "GAT"
         if self.policy == "dqn":
@@ -47,7 +48,7 @@ class Trainer:
         else:
 
             if self.net_name == "GCN":
-                self.model = AC_GCN(self.machines, self.machines).to(device)
+                self.model = AC_GCN().to(device)
             elif self.net_name == "GAT":
                 self.model = AC().to(device)
 
@@ -66,57 +67,36 @@ class Trainer:
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
 
     def train(self):
-        for episode in range(10):
 
-            self.sum_reward = []
-            t_list = []
-            # for i in range(self.args.env_num):
-            #     self.step(self.envs[i], i)
-            for i in range(self.args.env_num):
-                t = Thread(target=self.step, args=(self.envs[i], i))
-                t.start()
-                t_list.append(t)
-            for thread in t_list:
-                thread.join()
-            idle_total_list = []
+        for i in range(len(self.files)):
+            idle_list = []
             for env in self.envs:
-                p_idle = np.sum(env.p_total_idle_time)
-                d_idle = np.sum(env.d_total_idle_time)
+                env.reset(f"../data/simulation_instances/{self.files[i]}")
+            for episode in range(10):
+                self.sum_reward = []
+                t_list = []
+                for i in range(self.args.env_num):
+                    t = Thread(target=self.step, args=(self.envs[i], i))
+                    t.start()
+                    t_list.append(t)
+                for thread in t_list:
+                    thread.join()
+                for env in self.envs:
+                    # p_idle = np.sum(env.p_total_idle_time)
+                    d_idle = np.sum(env.d_total_idle_time)
 
-                total_idle_time = int(p_idle + d_idle)
-                # total_time = env.d_total_time + env.p_total_time
-                idle_total_list.append(d_idle)
-                idle_total_list.append(p_idle)
-                idle_total_list.append(total_idle_time)
-
-                env.reset(episode)
-            idle_total_list.append(episode)
-            self.idle_total.append(idle_total_list)
-
-            # update net
-            if self.policy == "dqn":
-                loss = self.algorithm.learn(self.buffer)
-            else:
-                if self.policy == "ppo":
-                    self.buffer.get_data()
-
-                    mini_buffer = self.buffer.get_mini_batch(self.args.mini_size, self.args.update_num)
-                    loss = 0
-                    for i in range(0, self.args.update_num):
-                        # self.env.reset()
-                        buf = mini_buffer[i]
-                        loss = self.algorithm.learn(buf)
-                else:
-                    loss = self.algorithm.learn(self.buffer.buffer_list[0])
-            self.buffer.reset()
-
-            # self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
-            self.r_l.append([self.sum_reward[0], loss.item(), episode])
+                    # total_idle_time = int(p_idle + d_idle)
+                    # total_time = env.d_total_time + env.p_total_time
+                    idle_list.append(d_idle)
+                    env.reset(f"../data/simulation_instances/{self.files[i]}")
+            print(self.files[i])
+            print("Mean:", np.mean(idle_list))
+            print("Std:", np.std(idle_list))
+            confidence_interval = np.percentile(np.array(idle_list), [2.5, 97.5])
+            print("Confidence interval（95%）:", confidence_interval)
 
     def step(self, env, i):
-        buffer = self.buffer.buffer_list[i]
-        done = False
-        for step in range(self.jobs * self.machines * 5):
+        for step in range(100000):
             data = env.state[:, [2, 4, 5, 6]].copy()
             data[:, [0, 2, 3]] = data[:, [0, 2, 3]] / (env.jobs_length.mean()*2)
             m_edge_index = coo_matrix(env.m_edge_matrix)
@@ -137,30 +117,8 @@ class Trainer:
                 action, value, log_prob = self.choose_action(data, env)
 
             done, reward = env.step(action, step)
-            if self.policy == "dqn":
-                self.buffer.buffer_list[i].add_data(state_t=data, action_t=action, reward_t=reward,
-                                                    terminal_t=done, q=q.view(1, -1))
-            else:
-                self.buffer.buffer_list[i].add_data(state_t=data, action_t=action, reward_t=reward,
-                                                    terminal_t=done, value_t=value, log_prob_t=log_prob)
             if done:
                 break
-
-        if done:
-            buffer.value_list.append(torch.tensor([0]).view(1, 1).to(device))
-        else:
-            data = env.state
-            edge_index = coo_matrix(env.edge_matrix)
-            edge_index = np.array([edge_index.row, edge_index.col])
-            data = torch.tensor(data, dtype=torch.float32).to(device)
-            edge_index = torch.tensor(edge_index.astype("int64")).to(device)
-
-            data = Data(x=data, edge_index=edge_index, num_nodes=len(data))
-            _, value, _ = self.model(data)
-            buffer.value_list.append(value.view(1, 1).detach().to(device))
-        if self.policy != "dqn":
-            buffer.compute_reward_to_go_returns_adv()
-        self.sum_reward.append(np.sum(buffer.reward_list))
 
     def choose_action(self, data, env):
         if self.policy == "dqn":
@@ -196,3 +154,14 @@ class Trainer:
 
     def load_params(self, model_name):
         self.model.load_state_dict(torch.load(f"./net/params/{model_name}.pth"))
+
+
+if __name__ == '__main__':
+    args = Params().args
+    print("The RL program starts training...")
+    trainer = Trainer(args)
+    trainer.train()
+    # trainer.save_model(trainer.model_name)
+    # # trainer.save_reward_loss("r_l")
+    # # trainer.save_data("result")
+    print("training finished!")
