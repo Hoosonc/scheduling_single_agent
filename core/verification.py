@@ -59,7 +59,7 @@ class Trainer:
         self.episode = 0
         self.sum_reward = []
         # self.model_name = f"{self.jobs}_{self.machines}"
-        self.model_name = f"300_10_AC_GAT"
+        self.model_name = f"300_10_dqn_GAT"
         self.load_params(self.model_name)
 
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
