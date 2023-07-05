@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2023/5/25 18:17
+# @Time    : 2023/7/5 20:14
 # @Author  : hxc
-# @File    : verification.py
+# @File    : verification2.py
 # @Software: PyCharm
-
 import os
 
 import pandas as pd
@@ -13,14 +12,26 @@ from verification_env import Environment
 import numpy as np
 import torch
 from torch.distributions.categorical import Categorical
-
+# import gc
+# import torch.optim as opt
+import csv
 from net.AC_model import AC
 from net.DQN_model import DQN
+# from multiprocessing import Queue
+from threading import Thread
+# from multiprocessing import Process
 import time
-
+from concurrent.futures import ThreadPoolExecutor
+# from net.cnn import CNN
+# from net.gcn_new import GCN
+# from net.utils import get_now_date as hxc
 from torch_geometric.data import Data
 from scipy.sparse import coo_matrix
 from buffers import BatchBuffer
+from multiprocessing import Process
+from multiprocessing import get_context
+# 创建进程上下文
+context = get_context('spawn')
 from net.AC_GCN import AC_GCN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -96,7 +107,7 @@ class Trainer:
     def step(self, i):
         # env = Environment(self.args)
         # env.reset(f"../data/simulation_instances/{self.files[i]}")
-        for step in range(100000):
+        for step in range(1050):
             data = self.env.state[:, [2, 4, 5, 6]].copy()
             data[:, [0, 2, 3]] = data[:, [0, 2, 3]] / (self.env.jobs_length.mean()*2)
             m_edge_index = coo_matrix(self.env.m_edge_matrix)

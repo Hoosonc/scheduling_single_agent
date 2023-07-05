@@ -4,7 +4,7 @@
 # @File    : other_rules.py
 # @Software: PyCharm
 import os
-
+import time
 import numpy as np
 import pandas as pd
 from sklearn.utils import shuffle
@@ -131,7 +131,7 @@ class Rules:
         for i in range(self.d_num):
             for s in sc_list[i]:
                 self.data_list.append(s)
-        self.save_data("test_result")
+        return self.save_data("test_result")
         # return self.save_data("test_result")
 
     # 4 LPT 选择工序加工时间最长的工件
@@ -256,62 +256,126 @@ class Rules:
 
     def save_data(self, file_name):
         df = pd.DataFrame(data=self.data_list, columns=["did", "pid", "start_time", "pro_time", "finish_time"])
-        d, p, d_idle = check_time(file=df)
+        total_time_d, total_time_p, d_idle, p_idle, total_idle = check_time(file=df)
         # print(d_idle)
-        # return d_idle
-        with open(f'../data/save_data/{file_name}.csv', mode='w+', encoding='utf-8-sig', newline='') as f:
-            csv_writer = csv.writer(f)
-            headers = ['did', 'pid', 'start_time', 'pro_time', 'finish_time']
-            csv_writer.writerow(headers)
-            csv_writer.writerows(self.data_list)
-            print(f'保存结果文件')
+        return total_time_d, total_time_p, d_idle, p_idle, total_idle
+        # with open(f'../data/save_data/{file_name}.csv', mode='w+', encoding='utf-8-sig', newline='') as f:
+        #     csv_writer = csv.writer(f)
+        #     headers = ['did', 'pid', 'start_time', 'pro_time', 'finish_time']
+        #     csv_writer.writerow(headers)
+        #     csv_writer.writerows(self.data_list)
+        #     print(f'保存结果文件')
 
 
 if __name__ == '__main__':
-    # files = os.listdir("../data/simulation_instances")
-    # for file in files:
-    #     # d_idle_list = []
-    #     LWKR_idle_list = []
-    #     MWKR_idle_list = []
-    #     spt_idle_list = []
-    #     lpt_idle_list = []
-    #     rule = Rules(f"../data/simulation_instances/{file}")
-    #     for i in range(100):
-    #         LWKR_idle = rule.LWKR()
-    #         MWKR_idle = rule.MWKR()
-    #         spt_idle = rule.SPT()
-    #         lpt_idle = rule.LPT()
-    #
-    #         # d_idle = main(i, f"../data/simulation_instances/{file}")
-    #         LWKR_idle_list.append(LWKR_idle)
-    #         MWKR_idle_list.append(MWKR_idle)
-    #         spt_idle_list.append(spt_idle)
-    #         lpt_idle_list.append(lpt_idle)
-    #     print(file)
-    #
-    #     print("LWKR")
-    #     print("Mean:", np.mean(LWKR_idle_list))
-    #     print("Std:", np.std(LWKR_idle_list))
-    #     confidence_interval = np.percentile(np.array(LWKR_idle_list), [2.5, 97.5])
-    #     print("Confidence interval（95%）:", confidence_interval)
-    #
-    #     print("MWKR")
-    #     print("Mean:", np.mean(MWKR_idle_list))
-    #     print("Std:", np.std(MWKR_idle_list))
-    #     confidence_interval = np.percentile(np.array(MWKR_idle_list), [2.5, 97.5])
-    #     print("Confidence interval（95%）:", confidence_interval)
-    #
-    #     print("SPT")
-    #     print("Mean:", np.mean(spt_idle_list))
-    #     print("Std:", np.std(spt_idle_list))
-    #     confidence_interval = np.percentile(np.array(spt_idle_list), [2.5, 97.5])
-    #     print("Confidence interval（95%）:", confidence_interval)
-    #
-    #     print("LPT")
-    #     print("Mean:", np.mean(lpt_idle_list))
-    #     print("Std:", np.std(lpt_idle_list))
-    #     confidence_interval = np.percentile(np.array(lpt_idle_list), [2.5, 97.5])
-    #     print("Confidence interval（95%）:", confidence_interval)
-    rule = Rules("../data/test_data.csv")
-    rule.SPT()
+    files = os.listdir("../data/simulation_instances")
+    for file in files:
+        # d_idle_list = []
+        LWKR_idle_list = []
+        MWKR_idle_list = []
+        spt_idle_list = []
+        lpt_idle_list = []
+        LWKR_time_count = 0
+        MWKR_time_count = 0
+        SPT_time_count = 0
+        LPT_time_count = 0
+        rule = Rules(f"../data/simulation_instances/{file}")
+        for i in range(100):
+            LWKR_start_time = time.perf_counter()
+            LWKR_total_time_d, LWKR_total_time_p, LWKR_d_idle, LWKR_p_idle, LWKR_total_idle = rule.LWKR()
+            LWKR_end_time = time.perf_counter()
+            LWKR_time_count += LWKR_end_time - LWKR_start_time
+
+            MWKR_start_time = time.perf_counter()
+            MWKR_total_time_d, MWKR_total_time_p, MWKR_d_idle, MWKR_p_idle, MWKR_total_idle = rule.MWKR()
+            MWKR_end_time = time.perf_counter()
+            MWKR_time_count += MWKR_end_time - MWKR_start_time
+
+            SPT_start_time = time.perf_counter()
+            SPT_total_time_d, SPT_total_time_p, SPT_d_idle, SPT_p_idle, SPT_total_idle = rule.SPT()
+            SPT_end_time = time.perf_counter()
+            SPT_time_count += SPT_end_time - SPT_start_time
+
+            LPT_start_time = time.perf_counter()
+            LPT_total_time_d, LPT_total_time_p, LPT_d_idle, LPT_p_idle, LPT_total_idle = rule.LPT()
+            LPT_end_time = time.perf_counter()
+            LPT_time_count += LPT_end_time - LPT_start_time
+
+            # d_idle = main(i, f"../data/simulation_instances/{file}")
+            LWKR_idle_list.append([LWKR_p_idle, LWKR_d_idle, LWKR_total_idle, LWKR_total_time_d])
+            MWKR_idle_list.append([MWKR_p_idle, MWKR_d_idle, MWKR_total_idle, MWKR_total_time_d])
+            spt_idle_list.append([SPT_p_idle, SPT_d_idle, SPT_total_idle, SPT_total_time_d])
+            lpt_idle_list.append([LPT_p_idle, LPT_d_idle, LPT_total_idle, LPT_total_time_d])
+        print(file)
+        print("LWKR_time_count", LWKR_time_count)
+        print("MWKR_time_count", MWKR_time_count)
+        print("SPT_time_count", SPT_time_count)
+        print("LPT_time_count", LPT_time_count)
+        pd.DataFrame(data=LWKR_idle_list, columns=["p_idle", "d_idle", "total_idle_time", "d_total_time"]).to_csv(
+            f"../data/simulation_results/result_LWKR_{file}", index=False)
+        pd.DataFrame(data=MWKR_idle_list, columns=["p_idle", "d_idle", "total_idle_time", "d_total_time"]).to_csv(
+            f"../data/simulation_results/result_MWKR_{file}", index=False)
+        pd.DataFrame(data=spt_idle_list, columns=["p_idle", "d_idle", "total_idle_time", "d_total_time"]).to_csv(
+            f"../data/simulation_results/result_SPT_{file}", index=False)
+        pd.DataFrame(data=lpt_idle_list, columns=["p_idle", "d_idle", "total_idle_time", "d_total_time"]).to_csv(
+            f"../data/simulation_results/result_LPT_{file}", index=False)
+    # rule = Rules("../data/test_data.csv")
+    # rule.SPT()
     # rule.LPT()
+    """
+    5_150_180.csv
+    LWKR_time_count 4.4017668925225735
+    MWKR_time_count 4.39379720017314
+    SPT_time_count 4.482285372912884
+    LPT_time_count 4.4774572141468525
+    5_150_179.csv
+    LWKR_time_count 4.389691393822432
+    MWKR_time_count 4.382357023656368
+    SPT_time_count 4.467848066240549
+    LPT_time_count 4.467322647571564
+    30_900_1041.csv
+    LWKR_time_count 25.57898547500372
+    MWKR_time_count 25.502608075737953
+    SPT_time_count 26.06779347732663
+    LPT_time_count 26.03086845576763
+    30_900_1039.csv
+    LWKR_time_count 25.517048377543688
+    MWKR_time_count 25.558426588773727
+    SPT_time_count 26.019618965685368
+    LPT_time_count 26.03498015552759
+    25_750_878.csv
+    LWKR_time_count 21.322479620575905
+    MWKR_time_count 21.305060625076294
+    SPT_time_count 21.73854999244213
+    LPT_time_count 21.79307121410966
+    25_750_875.csv
+    LWKR_time_count 21.33624890819192
+    MWKR_time_count 21.28655631840229
+    SPT_time_count 21.759806890040636
+    LPT_time_count 21.715739365667105
+    20_600_715.csv
+    LWKR_time_count 17.119035348296165
+    MWKR_time_count 17.0957213640213
+    SPT_time_count 17.470539581030607
+    LPT_time_count 17.461254566907883
+    15_450_535.csv
+    LWKR_time_count 12.86738782003522
+    MWKR_time_count 12.857424091547728
+    SPT_time_count 13.118995420634747
+    LPT_time_count 13.113761205226183
+    15_450_534.csv
+    LWKR_time_count 12.868749011307955
+    MWKR_time_count 12.856474418193102
+    SPT_time_count 13.115219946950674
+    LPT_time_count 13.117991514503956
+    10_300_357.csv
+    LWKR_time_count 8.624977227300406
+    MWKR_time_count 8.614013906568289
+    SPT_time_count 8.789154700934887
+    LPT_time_count 8.794267315417528
+    10_300_351.csv
+    LWKR_time_count 8.608302723616362
+    MWKR_time_count 8.595200922340155
+    SPT_time_count 8.767228912562132
+    LPT_time_count 8.767459072172642
+    """

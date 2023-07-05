@@ -10,6 +10,7 @@ def check_time(path=None, file=None):
     total_time_d = 0
     total_time_p = 0
     d_idle = 0
+    p_idle = 0
     if path is not None:
         file = pd.read_csv(path, encoding='utf-8-sig').fillna('')
     cla_by_did = file.groupby("did")
@@ -27,7 +28,14 @@ def check_time(path=None, file=None):
         s_p = sc_p[1].sort_values("start_time").values
         if len(s_p) > 1:
             total_time_p += s_p[len(s_p)-1][4] - s_p[0][2]
-    return total_time_d, total_time_p, d_idle
+        for i in range(len(s_p)):
+            if i == 0:
+                # p_idle += s_p[i][2]
+                p_idle += 0
+            else:
+                assert (s_p[i][2] - s_p[i-1][[4]]) >= 0
+                p_idle += (s_p[i][2] - s_p[i-1][4])
+    return total_time_d, total_time_p, d_idle, p_idle, d_idle+p_idle
 
 
 if __name__ == '__main__':

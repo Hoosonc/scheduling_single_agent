@@ -7,6 +7,7 @@
 """Minimal jobshop example."""
 import collections
 import os
+import time
 
 from tools.check_time import check_time
 import numpy as np
@@ -21,8 +22,8 @@ def save_data(data_list, i):
         for task in data_list[doc_id]:
             all_data.append([doc_id, int(task[1]), task[0], int(task[3]), int(task[0] + int(task[3]))])
     df = pd.DataFrame(data=all_data, columns=["did", "pid", "start_time", "pro_time", "finish_time"])
-    d, p, d_idle = check_time(file=df)
-    return d_idle
+    total_time_d, total_time_p, d_idle, p_idle, total_idle = check_time(file=df)
+    return total_time_d, total_time_p, d_idle, p_idle, total_idle
     # with open(f"../data/save_data/or_tool_{i}.csv", mode="w+", newline="") as f:
     #     csv_w = csv.writer(f)
     #     header = ["did", "pid", "start_time", "pro_time", "finish_time"]
@@ -116,17 +117,17 @@ def main(i, path):
                 assigned_jobs[machine].append(
                     assigned_task_type(start=solver.Value(
                         all_tasks[job_id, task_id].start),
-                                       job=job_id,
-                                       index=task_id,
-                                       duration=task[1]))
+                        job=job_id,
+                        index=task_id,
+                        duration=task[1]))
 
         # Create per machine output lines.
         output = ''
         for machine in all_machines:
             # Sort by starting time.
             assigned_jobs[machine].sort()
-        d_idle = save_data(assigned_jobs, i)
-        return d_idle
+        d_total_time, p_total_time, doc_idle, pat_idle, total_idl = save_data(assigned_jobs, i)
+        return d_total_time, p_total_time, doc_idle, pat_idle, total_idl
 
     else:
         print('No solution found.')
@@ -134,13 +135,36 @@ def main(i, path):
 
 if __name__ == '__main__':
     files = os.listdir("../data/simulation_instances")
+    """
+    5_150_180.csv 9.387215498834848
+    5_150_179.csv 10.728971730917692
+    30_900_1041.csv 47.70302239060402
+    30_900_1039.csv 43.044469363987446
+    25_750_878.csv 30.034836385399103
+    25_750_875.csv 31.7538954988122
+    20_600_715.csv 51.23646366596222
+    20_600_704.csv 26.38935363292694
+    15_450_535.csv 21.888741854578257
+    15_450_534.csv 22.362650714814663
+    10_300_357.csv 17.160793717950583
+    10_300_351.csv 29.11898533627391
+    """
     for file in files:
+        if file in ['5_150_180.csv',
+                    '5_150_179.csv',
+                    '30_900_1041.csv',
+                    '30_900_1039.csv',
+                    '25_750_878.csv',
+                    '25_750_875.csv']:
+            continue
+        start_time = time.perf_counter()
         d_idle_list = []
         for i in range(100):
-            d_idle = main(i, f"../data/simulation_instances/{file}")
-            d_idle_list.append(d_idle)
-        print(file)
-        print("Mean:", np.mean(d_idle_list))
-        print("Std:", np.std(d_idle_list))
-        confidence_interval = np.percentile(np.array(d_idle_list), [2.5, 97.5])
-        print("Confidence interval（95%）:", confidence_interval)
+            total_time_d, total_time_p, d_idle, p_idle, total_idle = main(i, f"../data/simulation_instances/{file}")
+            d_idle_list.append([p_idle, d_idle, total_idle, total_time_d])
+
+        df = pd.DataFrame(data=d_idle_list, columns=["p_idle", "d_idle", "total_idle_time", "d_total_time"])
+        df.to_csv(f"../data/simulation_results/result_or_{file}", index=False)
+        end_time = time.perf_counter()
+        time_count = end_time - start_time
+        print(file, time_count)

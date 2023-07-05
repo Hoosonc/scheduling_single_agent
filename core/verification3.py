@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2023/5/25 18:17
+# @Time    : 2023/7/5 21:37
 # @Author  : hxc
-# @File    : verification.py
+# @File    : verification3.py
 # @Software: PyCharm
 
 import os
@@ -159,7 +159,7 @@ class Trainer:
 if __name__ == '__main__':
     args = Params().args
     print("The RL program starts training...")
-    for alg in ["AC", "dqn"]:
+    for alg in ["dqn"]:
         args.policy = alg
         trainer = Trainer(args)
         trainer.train()

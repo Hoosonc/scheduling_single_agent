@@ -6,7 +6,7 @@
 import numpy as np
 import torch
 # import torch.nn.functional as f
-import pandas as pd
+# import pandas as pd
 from tools.get_data_txt import get_data_txt, get_data_csv
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
