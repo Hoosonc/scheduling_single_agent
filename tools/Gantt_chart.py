@@ -15,7 +15,7 @@ def gantt(path, p_num, d_num):
     plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
     color_arr = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
     color = []
-    np.random.seed(2023)
+    np.random.seed(60)
     for j in range(p_num):
         col = "#"
         c = np.random.choice(a=color_arr, size=6, replace=True)
@@ -24,7 +24,7 @@ def gantt(path, p_num, d_num):
         color.append(col)
 
     # 画布设置，大小与分辨率
-    plt.figure(figsize=(100, 30), dpi=80)
+    plt.figure(figsize=(20, 10), dpi=200)
     # barh-柱状图换向，循坏迭代-层叠效果
 
     for i in range(data.shape[0]):
@@ -35,18 +35,18 @@ def gantt(path, p_num, d_num):
         plt.text(int(float(data[i][2])) + (int(float(data[i][3])) / 2),
                  int(data[i][0]),
                  int(float(data[i][1])),
-                 fontsize=80,
+                 fontsize=30,
                  verticalalignment="center",
                  horizontalalignment="center"
                  )
 
     # plt.title("Gantt chart", fontsize=160)
-    plt.xlabel("Time", fontsize=100)
-    plt.ylabel("Doctor ID", fontsize=100)
-    plt.tick_params(labelsize=60)
+    plt.xlabel("Time", fontsize=30)
+    plt.ylabel("Doctor ID", fontsize=30)
+    plt.tick_params(labelsize=20)
     y_labels = [i for i in range(d_num)]
-    plt.yticks(range(d_num), y_labels, rotation=0, fontsize=100)
-    plt.xticks(fontsize=100)
+    plt.yticks(range(d_num), y_labels, rotation=0, fontsize=30)
+    plt.xticks(fontsize=30)
     plt.show()
 
 

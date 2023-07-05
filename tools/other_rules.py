@@ -131,7 +131,8 @@ class Rules:
         for i in range(self.d_num):
             for s in sc_list[i]:
                 self.data_list.append(s)
-        return self.save_data("test_result")
+        self.save_data("test_result")
+        # return self.save_data("test_result")
 
     # 4 LPT 选择工序加工时间最长的工件
     def LPT(self):
@@ -257,60 +258,60 @@ class Rules:
         df = pd.DataFrame(data=self.data_list, columns=["did", "pid", "start_time", "pro_time", "finish_time"])
         d, p, d_idle = check_time(file=df)
         # print(d_idle)
-        return d_idle
-        # with open(f'../data/save_data/{file_name}.csv', mode='w+', encoding='utf-8-sig', newline='') as f:
-        #     csv_writer = csv.writer(f)
-        #     headers = ['did', 'pid', 'start_time', 'pro_time', 'finish_time']
-        #     csv_writer.writerow(headers)
-        #     csv_writer.writerows(self.data_list)
-        #     print(f'保存结果文件')
+        # return d_idle
+        with open(f'../data/save_data/{file_name}.csv', mode='w+', encoding='utf-8-sig', newline='') as f:
+            csv_writer = csv.writer(f)
+            headers = ['did', 'pid', 'start_time', 'pro_time', 'finish_time']
+            csv_writer.writerow(headers)
+            csv_writer.writerows(self.data_list)
+            print(f'保存结果文件')
 
 
 if __name__ == '__main__':
-    files = os.listdir("../data/simulation_instances")
-    for file in files:
-        # d_idle_list = []
-        LWKR_idle_list = []
-        MWKR_idle_list = []
-        spt_idle_list = []
-        lpt_idle_list = []
-        rule = Rules(f"../data/simulation_instances/{file}")
-        for i in range(100):
-            LWKR_idle = rule.LWKR()
-            MWKR_idle = rule.MWKR()
-            spt_idle = rule.SPT()
-            lpt_idle = rule.LPT()
-
-            # d_idle = main(i, f"../data/simulation_instances/{file}")
-            LWKR_idle_list.append(LWKR_idle)
-            MWKR_idle_list.append(MWKR_idle)
-            spt_idle_list.append(spt_idle)
-            lpt_idle_list.append(lpt_idle)
-        print(file)
-
-        print("LWKR")
-        print("Mean:", np.mean(LWKR_idle_list))
-        print("Std:", np.std(LWKR_idle_list))
-        confidence_interval = np.percentile(np.array(LWKR_idle_list), [2.5, 97.5])
-        print("Confidence interval（95%）:", confidence_interval)
-
-        print("MWKR")
-        print("Mean:", np.mean(MWKR_idle_list))
-        print("Std:", np.std(MWKR_idle_list))
-        confidence_interval = np.percentile(np.array(MWKR_idle_list), [2.5, 97.5])
-        print("Confidence interval（95%）:", confidence_interval)
-
-        print("SPT")
-        print("Mean:", np.mean(spt_idle_list))
-        print("Std:", np.std(spt_idle_list))
-        confidence_interval = np.percentile(np.array(spt_idle_list), [2.5, 97.5])
-        print("Confidence interval（95%）:", confidence_interval)
-
-        print("LPT")
-        print("Mean:", np.mean(lpt_idle_list))
-        print("Std:", np.std(lpt_idle_list))
-        confidence_interval = np.percentile(np.array(lpt_idle_list), [2.5, 97.5])
-        print("Confidence interval（95%）:", confidence_interval)
-    # rule = Rules("../data/test_data.csv")
-    # rule.SPT()
+    # files = os.listdir("../data/simulation_instances")
+    # for file in files:
+    #     # d_idle_list = []
+    #     LWKR_idle_list = []
+    #     MWKR_idle_list = []
+    #     spt_idle_list = []
+    #     lpt_idle_list = []
+    #     rule = Rules(f"../data/simulation_instances/{file}")
+    #     for i in range(100):
+    #         LWKR_idle = rule.LWKR()
+    #         MWKR_idle = rule.MWKR()
+    #         spt_idle = rule.SPT()
+    #         lpt_idle = rule.LPT()
+    #
+    #         # d_idle = main(i, f"../data/simulation_instances/{file}")
+    #         LWKR_idle_list.append(LWKR_idle)
+    #         MWKR_idle_list.append(MWKR_idle)
+    #         spt_idle_list.append(spt_idle)
+    #         lpt_idle_list.append(lpt_idle)
+    #     print(file)
+    #
+    #     print("LWKR")
+    #     print("Mean:", np.mean(LWKR_idle_list))
+    #     print("Std:", np.std(LWKR_idle_list))
+    #     confidence_interval = np.percentile(np.array(LWKR_idle_list), [2.5, 97.5])
+    #     print("Confidence interval（95%）:", confidence_interval)
+    #
+    #     print("MWKR")
+    #     print("Mean:", np.mean(MWKR_idle_list))
+    #     print("Std:", np.std(MWKR_idle_list))
+    #     confidence_interval = np.percentile(np.array(MWKR_idle_list), [2.5, 97.5])
+    #     print("Confidence interval（95%）:", confidence_interval)
+    #
+    #     print("SPT")
+    #     print("Mean:", np.mean(spt_idle_list))
+    #     print("Std:", np.std(spt_idle_list))
+    #     confidence_interval = np.percentile(np.array(spt_idle_list), [2.5, 97.5])
+    #     print("Confidence interval（95%）:", confidence_interval)
+    #
+    #     print("LPT")
+    #     print("Mean:", np.mean(lpt_idle_list))
+    #     print("Std:", np.std(lpt_idle_list))
+    #     confidence_interval = np.percentile(np.array(lpt_idle_list), [2.5, 97.5])
+    #     print("Confidence interval（95%）:", confidence_interval)
+    rule = Rules("../data/test_data.csv")
+    rule.SPT()
     # rule.LPT()

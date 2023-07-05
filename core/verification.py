@@ -5,6 +5,8 @@
 # @Software: PyCharm
 import os
 
+import pandas as pd
+
 from params import Params
 from verification_env import Environment
 import numpy as np
@@ -18,7 +20,7 @@ from net.DQN_model import DQN
 # from multiprocessing import Queue
 from threading import Thread
 # from multiprocessing import Process
-
+import time
 # from net.cnn import CNN
 # from net.gcn_new import GCN
 # from net.utils import get_now_date as hxc
@@ -59,9 +61,9 @@ class Trainer:
         self.episode = 0
         self.sum_reward = []
         # self.model_name = f"{self.jobs}_{self.machines}"
-        self.model_name = f"300_10_dqn_GAT"
+        self.model_name = f"300_10_ppo_GAT"
         self.load_params(self.model_name)
-
+        self.time_count = 0
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
 
     def train(self):
@@ -71,6 +73,8 @@ class Trainer:
             for env in self.envs:
                 env.reset(f"../data/simulation_instances/{self.files[i]}")
             for episode in range(10):
+                # 记录程序开始时间
+                start_time = time.perf_counter()
                 self.sum_reward = []
                 t_list = []
                 for j in range(self.args.env_num):
@@ -79,19 +83,27 @@ class Trainer:
                     t_list.append(t)
                 for thread in t_list:
                     thread.join()
+                # 记录程序开始时间
+                end_time = time.perf_counter()
+                self.time_count += end_time - start_time
                 for env in self.envs:
-                    # p_idle = np.sum(env.p_total_idle_time)
+
+                    p_idle = np.sum(env.p_total_idle_time)
                     d_idle = np.sum(env.d_total_idle_time)
 
-                    # total_idle_time = int(p_idle + d_idle)
+                    d_total_time = env.get_total_time()
+
+                    total_idle_time = int(p_idle + d_idle)
                     # total_time = env.d_total_time + env.p_total_time
-                    idle_list.append(d_idle)
+                    idle_list.append([p_idle, d_idle, total_idle_time, d_total_time])
                     env.reset(f"../data/simulation_instances/{self.files[i]}")
             print(self.files[i])
-            print("Mean:", np.mean(idle_list))
-            print("Std:", np.std(idle_list))
-            confidence_interval = np.percentile(np.array(idle_list), [2.5, 97.5])
-            print("CI:", confidence_interval)
+            df = pd.DataFrame(data=idle_list, columns=["p_idle", "d_idle", "total_idle_time", "d_total_time"])
+            df.to_csv(f"../data/simulation_results/result_{self.files}")
+            # print("Mean:", np.mean(idle_list))
+            # print("Std:", np.std(idle_list))
+            # confidence_interval = np.percentile(np.array(idle_list), [2.5, 97.5])
+            # print("CI:", confidence_interval)
 
     def step(self, env, i):
         for step in range(100000):

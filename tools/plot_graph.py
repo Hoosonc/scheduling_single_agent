@@ -6,7 +6,7 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 import csv
-
+plt.figure(figsize=(10, 10), dpi=300)
 # 创建一个空的有向图
 graph = nx.DiGraph()
 
@@ -52,7 +52,7 @@ pos = nx.spring_layout(graph)  # 定义节点的布局方式
 # 提取节点的颜色信息
 node_colors = [graph.nodes[node]['color'] for node in graph.nodes()]
 
-nx.draw_networkx(graph, pos=pos, with_labels=False, node_size=500, node_color=node_colors, cmap='rainbow')
+nx.draw_networkx(graph, pos=pos, with_labels=True, node_size=500, node_color=node_colors, cmap='rainbow')
 # nx.draw_networkx(graph, pos=pos, with_labels=True, node_size=500, node_color='lightblue')
-plt.figure(figsize=(50, 50), dpi=200)
+
 plt.show()

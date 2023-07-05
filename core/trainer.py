@@ -51,7 +51,7 @@ class Trainer:
         else:
 
             if self.net_name == "GCN":
-                self.model = AC_GCN(self.machines, self.machines).to(device)
+                self.model = AC_GCN().to(device)
             elif self.net_name == "GAT":
                 self.model = AC().to(device)
 

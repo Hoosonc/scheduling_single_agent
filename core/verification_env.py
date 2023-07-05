@@ -159,11 +159,14 @@ class Environment:
         # else:
         #     self.candidate[did] = self.random_sort[did][int(self.action_mask[did])]
 
-    # def get_total_time(self):
-    #     total_time = 0
-    #     for i in range(self.doctor.player_num):
-    #         total_time += self.doctor.schedule_list[i][int(self.doctor.free_pos[i] - 1)][3]
-    #     return total_time
+    def get_total_time(self):
+        total_time = 0
+        for sc in self.d_sc_list:
+            schedule_list = np.array(sc)
+            last_time = schedule_list[:, 4].max()
+            total_time += last_time
+        return total_time
+
     def get_edge(self, idx, col):
         temp_mtx = self.state[self.state[:, col] == idx].copy()
         earliest_start_times = np.unique(temp_mtx[:, 6])
