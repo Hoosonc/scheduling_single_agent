@@ -170,7 +170,7 @@ class Trainer:
 if __name__ == '__main__':
     args = Params().args
     print("The RL program starts training...")
-    for alg in ["AC", "dqn"]:
+    for alg in ["AC"]:
         args.policy = alg
         trainer = Trainer(args)
         trainer.train()

@@ -16,9 +16,9 @@ import pandas as pd
 import csv
 
 
-def save_data(data_list, i):
+def save_data(data_list):
     all_data = []
-    for doc_id in range(10):
+    for doc_id in range(len(data_list)):
         for task in data_list[doc_id]:
             all_data.append([doc_id, int(task[1]), task[0], int(task[3]), int(task[0] + int(task[3]))])
     df = pd.DataFrame(data=all_data, columns=["did", "pid", "start_time", "pro_time", "finish_time"])
@@ -43,7 +43,7 @@ def get_data(path):
     return data_list
 
 
-def main(i, path):
+def main(path):
     """Minimal jobshop problem."""
     # Data.
     # jobs_data = [  # task = (machine_id, processing_time).
@@ -126,7 +126,7 @@ def main(i, path):
         for machine in all_machines:
             # Sort by starting time.
             assigned_jobs[machine].sort()
-        d_total_time, p_total_time, doc_idle, pat_idle, total_idl = save_data(assigned_jobs, i)
+        d_total_time, p_total_time, doc_idle, pat_idle, total_idl = save_data(assigned_jobs)
         return d_total_time, p_total_time, doc_idle, pat_idle, total_idl
 
     else:
@@ -136,31 +136,24 @@ def main(i, path):
 if __name__ == '__main__':
     files = os.listdir("../data/simulation_instances")
     """
-    5_150_180.csv 9.387215498834848
+    5_150_180.csv 9.429400779306889
     5_150_179.csv 10.728971730917692
-    30_900_1041.csv 47.70302239060402
-    30_900_1039.csv 43.044469363987446
-    25_750_878.csv 30.034836385399103
-    25_750_875.csv 31.7538954988122
-    20_600_715.csv 51.23646366596222
-    20_600_704.csv 26.38935363292694
-    15_450_535.csv 21.888741854578257
-    15_450_534.csv 22.362650714814663
-    10_300_357.csv 17.160793717950583
-    10_300_351.csv 29.11898533627391
+    30_900_1041.csv 62.70113477855921
+    30_900_1039.csv 54.070056181401014
+    25_750_878.csv 38.48305977135897
+    25_750_875.csv 41.6258698888123
+    20_600_715.csv 56.54425938427448
+    20_600_704.csv 31.42456056177616
+    15_450_535.csv 24.376219894737005
+    15_450_534.csv 24.996688049286604
+    10_300_357.csv 16.974918179214
+    10_300_351.csv 29.052186463028193
     """
     for file in files:
-        if file in ['5_150_180.csv',
-                    '5_150_179.csv',
-                    '30_900_1041.csv',
-                    '30_900_1039.csv',
-                    '25_750_878.csv',
-                    '25_750_875.csv']:
-            continue
         start_time = time.perf_counter()
         d_idle_list = []
         for i in range(100):
-            total_time_d, total_time_p, d_idle, p_idle, total_idle = main(i, f"../data/simulation_instances/{file}")
+            total_time_d, total_time_p, d_idle, p_idle, total_idle = main(f"../data/simulation_instances/{file}")
             d_idle_list.append([p_idle, d_idle, total_idle, total_time_d])
 
         df = pd.DataFrame(data=d_idle_list, columns=["p_idle", "d_idle", "total_idle_time", "d_total_time"])
