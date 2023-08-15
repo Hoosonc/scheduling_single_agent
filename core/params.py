@@ -21,7 +21,7 @@ class Params:
                                  help='discount factor for rewards (default: 0.99)')
         self.parser.add_argument('--gae-lambda', type=float, default=0.95,
                                  help='lambda parameter for GAE (default: 1.00)')
-        self.parser.add_argument('--entropy-coefficient', type=float, default=0.01,
+        self.parser.add_argument('--entropy-coefficient', type=float, default=0.05,
                                  help='entropy term coefficient (default: 0.01)')
         self.parser.add_argument('--value-loss-coefficient', type=float, default=0.5,
                                  help='value loss coefficient (default: 0.5)')
@@ -35,7 +35,7 @@ class Params:
                                  help='maximum length of an episode (default: 1)')
         self.parser.add_argument('--update_num', type=int, default=3,
                                  help='')
-        self.parser.add_argument('--env_num', type=int, default=1,
+        self.parser.add_argument('--env_num', type=int, default=5,
                                  help='')
         self.parser.add_argument('--mini_size', type=int, default=113,
                                  help='')

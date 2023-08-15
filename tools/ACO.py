@@ -25,7 +25,7 @@ for file in files:
         num_jobs = len(job_ids)  # 零件数量
         num_machines = len(np.unique(machine_ids))  # 机器数量
         num_ants = 10  # 蚂蚁数量
-        num_iterations = 100  # 迭代次数
+        num_iterations = 20  # 迭代次数
         pheromone = np.ones((num_jobs, num_machines))  # 信息素矩阵
         alpha = 1.0  # 信息素重要程度
         beta = 2.0  # 启发式因子重要程度

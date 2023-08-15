@@ -5,6 +5,7 @@
 # @Software : PyCharm
 import random
 from sklearn.utils import shuffle
+from scipy.optimize import linprog
 import numpy as np
 import torch
 import torch.nn.functional as f
@@ -41,5 +42,24 @@ def transition_time():
 
 
 if __name__ == '__main__':
-    a = np.random.permutation([2, 3, 8, 10])
-    print(a)
+    np.random.seed(3)
+    # for i in range(10):
+    #     a = np.random.permutation([2, 3, 8, 10])
+    #     print(a)
+    # 定义方程的系数矩阵和右侧常数向量
+    # A_eq = np.array([[-0.1, 1, 1], [0.9, 3, 2]])
+    # b_eq = np.array([0, 232])
+    #
+    # # 定义变量的界限
+    # x_bounds = (0, None)
+    # y_bounds = (0, None)
+    # z_bounds = (0, None)
+    #
+    # # 使用线性规划求解
+    # result = linprog(c=[0, 0, 0], A_eq=A_eq, b_eq=b_eq, bounds=[x_bounds, y_bounds, z_bounds])
+    #
+    # # 输出结果
+    # x, y, z = result.x
+    # print("x =", x)
+    # print("y =", y)
+    # print("z =", z)

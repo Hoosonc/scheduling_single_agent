@@ -76,6 +76,7 @@ class Trainer:
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
 
     def train(self):
+
         for episode in range(self.args.episode):
 
             self.sum_reward = []
