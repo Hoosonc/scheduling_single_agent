@@ -6,10 +6,17 @@
 from core.params import Params
 from core.trainer import Trainer
 
+def adjust_params():
+    params = Params()
+    for algorithm in params.policy_list:
+        params.args.policy = algorithm
+        for lr in params.lr_list:
+            params.args.lr = lr
+            for dr in params.discount_rate:
+
 if __name__ == '__main__':
-    args = Params().args
     print("The RL program starts training...")
-    trainer = Trainer(args)
+    trainer = Trainer()
     trainer.train()
     trainer.save_model(trainer.model_name)
     # trainer.save_reward_loss("r_l")

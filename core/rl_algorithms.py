@@ -16,7 +16,6 @@ class PPOClip:
         self.v_loss = None
         self.pi_loss = None
         self.entropy = None
-
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr_v)
         # self.scheduler = StepLR(self.optimizer, step_size=3000, gamma=0.5)
 

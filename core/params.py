@@ -11,9 +11,14 @@ class Params:
         self.parser = argparse.ArgumentParser(description=None)
         self.get_parser()
         self.args = self.parser.parse_args()
+        self.lr_list = [0.0002, 0.00001]
+        self.lr_decay_list = [0.001, 0.0001]
+        self.decay_episodes = []
+        self.discount_rate = [0.99, 0.9, 1, 0.999]
+        self.policy_list = ["ppo2", "AC", "dqn"]
 
     def get_parser(self):
-        self.parser.add_argument('--lr_v', type=float, default=0.01,
+        self.parser.add_argument('--lr', type=float, default=0.01,
                                  help='learning rate (default: 0.0001)')
         self.parser.add_argument('--epsilon', type=float, default=0.3,
                                  help='epsilon (default: 0.3)')
@@ -27,7 +32,7 @@ class Params:
                                  help='value loss coefficient (default: 0.5)')
         self.parser.add_argument('--max-grad-norm', type=float, default=10,
                                  help='max grad norm (default: 50)')
-        self.parser.add_argument('--seed', type=int, default=2022,
+        self.parser.add_argument('--seed', type=int, default=2023,
                                  help='random seed (default: 1)')
         self.parser.add_argument('--num-steps', type=int, default=78,
                                  help='number of forward steps in A2C (default: 300)')
