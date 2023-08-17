@@ -35,7 +35,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Trainer:
-    def __init__(self):
+    def __init__(self, args):
         self.params = Params()
         self.args = self.params.args
         self.policy = self.args.policy

@@ -50,3 +50,5 @@ class Params:
                                  help='The path of Reg file')
         self.parser.add_argument('--policy', type=str, default='ppo',
                                  help='dqn,AC, ppo')
+        self.parser.add_argument('--file-name', type=str, default='1',
+                                 help='')
