@@ -10,7 +10,7 @@ class PPOClip:
         self.value_factor = args.value_loss_coefficient  # paper value
         self.entropy_factor = args.entropy_coefficient
         self.clip_epsilon = args.epsilon
-        self.lr_v = args.lr_v
+        self.lr_v = args.lr
         self.max_grad_norm = args.max_grad_norm
         self.v_loss_no_clip = None
         self.v_loss = None

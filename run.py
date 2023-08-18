@@ -5,6 +5,7 @@
 # @Software : PyCharm
 from core.params import Params
 from core.trainer import Trainer
+from torch.optim.lr_scheduler import StepLR
 
 
 def adjust_params():
@@ -18,9 +19,22 @@ def adjust_params():
                 print(f"--algorithm:{algorithm} --lr:{lr} --discount rate:{dr} start training!")
                 params.args.gamma = dr
                 params.args.file_name = n
-                n += 1
                 trainer = Trainer(params.args)
                 trainer.train()
+                n += 1
+                trainer.save_model(trainer.model_name)
+                print(f"--algorithm:{algorithm} --lr:{lr} --discount rate:{dr} training finished!")
+
+        for lr in params.lr_decay_list:
+            params.args.lr = lr
+            for dr in params.discount_rate:
+                print(f"--algorithm:{algorithm} --lr:{lr} --discount rate:{dr} start training!")
+                params.args.gamma = dr
+                params.args.file_name = n
+                trainer = Trainer(params.args)
+                trainer.scheduler = StepLR(trainer.algorithm.optimizer, step_size=500, gamma=0.9)
+                trainer.train()
+                n += 1
                 trainer.save_model(trainer.model_name)
                 print(f"--algorithm:{algorithm} --lr:{lr} --discount rate:{dr} training finished!")
 

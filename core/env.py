@@ -103,7 +103,7 @@ class Environment:
 
             pro_time = self.state[process_id, 2]
             insert_data = self.find_position(pid, did, process_id, pro_time)
-            reward += insert_data[2]
+            # reward += insert_data[2]
             insert_data.append(step)
             insert_data.append(process_id)
 
@@ -124,13 +124,13 @@ class Environment:
 
                 patient_idle_time = self.cal_p_idle(pid)
 
-                reward += (patient_idle_time - self.p_total_idle_time[pid])
+                # reward += (patient_idle_time - self.p_total_idle_time[pid])
                 self.p_total_idle_time[pid] = patient_idle_time
                 total_idle_time_p = np.sum(self.p_total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
 
             reward = 1 - (reward/self.sum_op)
-
+            print(reward)
             self.update_states(insert_data[2], pid, did, process_id)
 
         if sum(self.state[:, 4]) == 0:

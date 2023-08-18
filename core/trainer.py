@@ -18,7 +18,7 @@ from net.DQN_model import DQN
 # from multiprocessing import Queue
 from threading import Thread
 # from multiprocessing import Process
-from torch.optim.lr_scheduler import StepLR
+
 # from net.cnn import CNN
 # from net.gcn_new import GCN
 # from net.utils import get_now_date as hxc
@@ -59,17 +59,17 @@ class Trainer:
             else:
                 self.algorithm = AC_update(self.model, device, self.args)
 
-        self.scheduler = StepLR(self.algorithm.optimizer, step_size=500, gamma=0.5)
+        self.scheduler = None
 
         self.scheduled_data = []
-        self.file_name = ""
+        # self.file_name = ""
         self.reward_list = []
         self.terminal_list = []
         self.r_l = []
         self.idle_total = []
         self.episode = 0
         self.sum_reward = []
-        self.model_name = f"{self.jobs}_{self.machines}"
+        self.model_name = f"{self.args.file_name}"
         # self.load_params(self.model_name)
 
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
@@ -99,7 +99,7 @@ class Trainer:
                 idle_total_list.append(p_idle)
                 idle_total_list.append(total_idle_time)
 
-                env.reset(episode)
+                env.reset()
             idle_total_list.append(episode)
             self.idle_total.append(idle_total_list)
 
@@ -123,7 +123,7 @@ class Trainer:
             # self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
             self.r_l.append([self.sum_reward[0], loss.item(), episode])
 
-            if episode < 5000:
+            if self.scheduler is not None:
                 self.scheduler.step()
 
             # print("episode:", episode)
