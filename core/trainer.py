@@ -79,15 +79,15 @@ class Trainer:
         for episode in range(self.args.episode):
 
             self.sum_reward = []
-            # t_list = []
-            for i in range(self.args.env_num):
-                self.step(self.envs[i], i)
+            t_list = []
             # for i in range(self.args.env_num):
-            #     t = Thread(target=self.step, args=(self.envs[i], i))
-            #     t.start()
-            #     t_list.append(t)
-            # for thread in t_list:
-            #     thread.join()
+            #     self.step(self.envs[i], i)
+            for i in range(self.args.env_num):
+                t = Thread(target=self.step, args=(self.envs[i], i))
+                t.start()
+                t_list.append(t)
+            for thread in t_list:
+                thread.join()
             idle_total_list = []
             for env in self.envs:
                 p_idle = np.sum(env.p_total_idle_time)
@@ -147,7 +147,7 @@ class Trainer:
     def step(self, env, i):
         buffer = self.buffer.buffer_list[i]
         done = False
-        for step in range(self.jobs * self.machines * 5):
+        for step in range(300):
             data = env.state[:, [2, 4, 5, 6]].copy()
             data[:, [0, 2, 3]] = data[:, [0, 2, 3]] / (env.jobs_length.mean()*2)
             m_edge_index = coo_matrix(env.m_edge_matrix)
