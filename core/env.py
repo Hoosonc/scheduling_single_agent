@@ -17,13 +17,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Environment:
-    def __init__(self, args):
+    def __init__(self, args, env_id):
         # init origin attributes
         self.args = args
-        # (self.all_job_list, self.jobs, self.machines,
-        #  self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_txt(args.reg_path)
+        self.env_id = env_id
         (self.all_job_list, self.jobs, self.machines,
-         self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(0, 300, 10)
+         self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(env_id)
         self.reg_num = self.all_job_list.shape[0]
         self.j_edge_matrix = None
         self.m_edge_matrix = None
@@ -57,10 +56,7 @@ class Environment:
         self.reward = None
         self.idle_total = []
 
-    def reset(self, ep):
-        if (ep+1) % 100 == 0:
-            (self.all_job_list, self.jobs, self.machines,
-             self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv((ep+1), 300, 10)
+    def reset(self):
         self.state = self.all_job_list.copy()
         self.state = np.concatenate([self.state, np.ones((self.state.shape[0], 1))], axis=1)  # 添加“是否处理”
         self.state = np.concatenate([self.state, np.zeros((self.state.shape[0], 2))], axis=1)  # add “开始时间” 和 ”最早开始时间“
@@ -107,7 +103,7 @@ class Environment:
 
             pro_time = self.state[process_id, 2]
             insert_data = self.find_position(pid, did, process_id, pro_time)
-
+            reward += insert_data[2]
             insert_data.append(step)
             insert_data.append(process_id)
 
@@ -128,15 +124,15 @@ class Environment:
 
                 patient_idle_time = self.cal_p_idle(pid)
 
-                # reward += (patient_idle_time - self.p_total_idle_time[pid])
+                reward += (patient_idle_time - self.p_total_idle_time[pid])
                 self.p_total_idle_time[pid] = patient_idle_time
                 total_idle_time_p = np.sum(self.p_total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
 
-            reward = 1 - (reward/self.jobs_length.max())
+            reward = 1 - (reward/self.sum_op)
 
             self.update_states(insert_data[2], pid, did, process_id)
-        # print(reward)
+
         if sum(self.state[:, 4]) == 0:
             self.done = True
 

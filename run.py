@@ -9,6 +9,7 @@ from core.trainer import Trainer
 
 def adjust_params():
     params = Params()
+    n = 0
     for algorithm in params.policy_list:
         params.args.policy = algorithm
         for lr in params.lr_list:
@@ -16,6 +17,8 @@ def adjust_params():
             for dr in params.discount_rate:
                 print(f"--algorithm:{algorithm} --lr:{lr} --discount rate:{dr} start training!")
                 params.args.gamma = dr
+                params.args.file_name = n
+                n += 1
                 trainer = Trainer(params.args)
                 trainer.train()
                 trainer.save_model(trainer.model_name)

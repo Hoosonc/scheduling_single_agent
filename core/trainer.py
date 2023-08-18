@@ -19,7 +19,6 @@ from net.DQN_model import DQN
 from threading import Thread
 # from multiprocessing import Process
 from torch.optim.lr_scheduler import StepLR
-from core.params import Params
 # from net.cnn import CNN
 # from net.gcn_new import GCN
 # from net.utils import get_now_date as hxc
@@ -36,13 +35,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class Trainer:
     def __init__(self, args):
-        self.params = Params()
-        self.args = self.params.args
+        self.args = args
         self.policy = self.args.policy
         torch.manual_seed(self.args.seed)
-        self.envs = [Environment(self.args) for _ in range(self.args.env_num)]
+        self.envs = [Environment(self.args, env_id) for env_id in range(self.args.env_num)]
         for env in self.envs:
-            env.reset(0)
+            env.reset()
         self.jobs = self.envs[0].jobs
         self.machines = self.envs[0].machines
         self.algorithm = None
@@ -56,8 +54,7 @@ class Trainer:
                 self.model = AC_GCN().to(device)
             elif self.net_name == "GAT":
                 self.model = AC().to(device)
-
-            if self.policy == "ppo":
+            if self.policy == "ppo2":
                 self.algorithm = PPOClip(self.model, device, self.args)
             else:
                 self.algorithm = AC_update(self.model, device, self.args)
