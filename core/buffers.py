@@ -159,35 +159,59 @@ class BatchBuffer:
         self.returns = torch.cat(return_list, dim=1)
         self.adv = torch.cat(adv_list, dim=1)
 
-    def get_mini_batch(self, mini_size, update_num):
+    def get_mini_batch(self, update_num):
         mini_buffer = [Buffer(self.gamma, self.lam) for _ in range(update_num)]
         t_list = []
+        mini_size = (len(self.states) // update_num)
+        if (mini_size * update_num) < len(self.states):
+            mini_size += 1
         for i in range(update_num):
-            t = Thread(target=self.get_batch, args=(mini_buffer[i], mini_size, i))
+            t = Thread(target=self.get_batch, args=(mini_buffer[i], mini_size))
             t.start()
             t_list.append(t)
         for thread in t_list:
             thread.join()
         return mini_buffer
 
-    def get_batch(self, buf, mini_size, idx):
-        assert (idx*mini_size) < len(self.states)
-        if ((idx+1)*mini_size) >= len(self.states):
-            select_index = np.arange(start=(idx*mini_size), stop=len(self.states))
+    def get_batch(self, buf, mini_size):
+
+        if mini_size >= len(self.states):
+            select_index = np.random.choice(a=len(self.states), size=len(self.states), replace=False, p=None)
         else:
-            select_index = np.arange(start=(idx*mini_size), stop=(idx+1)*mini_size)
+            # select_index = np.arange(start=(idx*mini_size), stop=(idx+1)*mini_size)
+            select_index = np.random.choice(a=len(self.states), size=mini_size, replace=False, p=None)
         # select_index = np.random.choice(a=len(self.states), size=mini_size, replace=False, p=None)
+        select_index = np.sort(select_index)[::-1]
         # buf.state_list = self.states[select_index]
         # buf.edge_list = self.edges[select_index]
         for index in select_index:
             buf.state_list.append(self.states[index])
+            del self.states[index]
             # buf.candidate_list.append(self.candidate[index])
         # buf.edge_attr_list = self.edges_attr[select_index]
         buf.action_list = self.actions[select_index]
+        # 生成一个布尔索引数组，表示要删除的位置
+        delete_action_mask = np.zeros(len(self.actions), dtype=bool)
+        delete_action_mask[delete_action_mask] = True
+
+        # 使用布尔索引和切片生成新的数组，排除要删除的元素
+        self.actions = self.actions[~delete_action_mask]
+        buf.reward_list = self.rewards[select_index]
+        self.rewards = self.rewards[~delete_action_mask]
+
+        # 生成一个布尔索引张量，表示要删除的位置
+        delete_mask = torch.from_numpy(delete_action_mask)
+        delete_mask = delete_mask.to(dtype=torch.bool)
+
+        # 使用布尔索引生成新的张量，排除要删除的元素
+        # new_tensor = tensor[~delete_mask]
         buf.value_list = torch.index_select(self.values.view(1, -1), dim=1,
                                             index=torch.tensor(select_index).to(device))
+        self.values = self.values[~delete_mask]
         buf.log_prob_list = torch.index_select(self.log_prob.view(1, -1), dim=1,
                                                index=torch.tensor(select_index).to(device))
-        buf.reward_list = self.rewards[select_index]
+        self.log_prob = self.log_prob[~delete_mask]
         buf.returns = torch.index_select(self.returns, dim=1, index=torch.tensor(select_index).to(device))
+        self.returns = self.returns[~delete_mask]
         buf.adv = torch.index_select(self.adv, dim=1, index=torch.tensor(select_index).to(device))
+        self.adv = self.adv[~delete_mask]

@@ -98,7 +98,7 @@ class Trainer:
                 if self.policy == "ppo2":
                     self.buffer.get_data()
 
-                    mini_buffer = self.buffer.get_mini_batch(self.args.mini_size, self.args.update_num)
+                    mini_buffer = self.buffer.get_mini_batch(self.args.update_num)
                     loss = 0
                     for i in range(0, self.args.update_num):
                         # self.env.reset()

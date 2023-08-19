@@ -130,7 +130,7 @@ class Environment:
                 self.total_idle_time_p = total_idle_time_p
 
             reward = 1 - (reward/self.jobs_length.max())
-            print(reward)
+            # print(reward)
             self.update_states(insert_data[2], pid, did, process_id)
 
         if sum(self.state[:, 4]) == 0:
