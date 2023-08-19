@@ -55,6 +55,11 @@ class Environment:
         self.tasks = None
         self.reward = None
         self.idle_total = []
+        self.r_ = []
+        self.l_ = []
+        self.d_idle = []
+        self.p_idle = []
+        self.total_idle_time = []
 
     def reset(self):
         self.state = self.all_job_list.copy()

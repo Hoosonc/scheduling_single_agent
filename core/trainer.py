@@ -66,6 +66,7 @@ class Trainer:
         self.reward_list = []
         self.terminal_list = []
         self.r_l = []
+
         self.idle_total = []
         self.episode = 0
         self.sum_reward = []
@@ -88,19 +89,21 @@ class Trainer:
                 t_list.append(t)
             for thread in t_list:
                 thread.join()
-            idle_total_list = []
+            p_idle_list = []
+            d_idle_list = []
+            total_idle_time_list = []
+            total_idle = []
             for env in self.envs:
-                p_idle = np.sum(env.p_total_idle_time)
-                d_idle = np.sum(env.d_total_idle_time)
+                p_idle = int(np.sum(env.p_total_idle_time))
+                d_idle = int(np.sum(env.d_total_idle_time))
 
                 total_idle_time = int(p_idle + d_idle)
                 # total_time = env.d_total_time + env.p_total_time
-                idle_total_list.append(d_idle)
-                idle_total_list.append(p_idle)
-                idle_total_list.append(total_idle_time)
-
+                d_idle_list.append(d_idle)
+                p_idle_list.append(p_idle)
+                total_idle_time_list.append(total_idle_time)
                 env.reset()
-            idle_total_list.append(episode)
+
             self.idle_total.append(idle_total_list)
 
             # update net
@@ -123,7 +126,7 @@ class Trainer:
             # self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
             self.r_l.append([self.sum_reward[0], loss.item(), episode])
 
-            if self.scheduler is not None:
+            if self.scheduler is not None and (episode + 1) % 20 == 0:
                 self.scheduler.step()
 
             # print("episode:", episode)

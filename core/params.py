@@ -42,7 +42,7 @@ class Params:
                                  help='')
         self.parser.add_argument('--env_num', type=int, default=5,
                                  help='')
-        self.parser.add_argument('--mini_size', type=int, default=113,
+        self.parser.add_argument('--mini_size', type=int, default=232,
                                  help='')
         self.parser.add_argument('--episode', type=int, default=10000,
                                  help='How many episode to train the RL algorithm')
