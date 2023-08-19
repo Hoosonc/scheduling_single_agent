@@ -55,11 +55,6 @@ class Environment:
         self.tasks = None
         self.reward = None
         self.idle_total = []
-        self.r_ = []
-        self.l_ = []
-        self.d_idle = []
-        self.p_idle = []
-        self.total_idle_time = []
 
     def reset(self):
         self.state = self.all_job_list.copy()
@@ -134,7 +129,7 @@ class Environment:
                 total_idle_time_p = np.sum(self.p_total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
 
-            reward = 1 - (reward/self.sum_op)
+            reward = 1 - (reward/self.jobs_length.max())
             print(reward)
             self.update_states(insert_data[2], pid, did, process_id)
 

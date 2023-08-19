@@ -89,28 +89,13 @@ class Trainer:
                 t_list.append(t)
             for thread in t_list:
                 thread.join()
-            p_idle_list = []
-            d_idle_list = []
-            total_idle_time_list = []
-            total_idle = []
-            for env in self.envs:
-                p_idle = int(np.sum(env.p_total_idle_time))
-                d_idle = int(np.sum(env.d_total_idle_time))
 
-                total_idle_time = int(p_idle + d_idle)
-                # total_time = env.d_total_time + env.p_total_time
-                d_idle_list.append(d_idle)
-                p_idle_list.append(p_idle)
-                total_idle_time_list.append(total_idle_time)
-                env.reset()
-
-            self.idle_total.append(idle_total_list)
-
+            self.get_idle_time(episode)
             # update net
             if self.policy == "dqn":
                 loss = self.algorithm.learn(self.buffer)
             else:
-                if self.policy == "ppo":
+                if self.policy == "ppo2":
                     self.buffer.get_data()
 
                     mini_buffer = self.buffer.get_mini_batch(self.args.mini_size, self.args.update_num)
@@ -133,17 +118,17 @@ class Trainer:
             # print("总时间：", self.env.get_total_time())
             if episode % 1 == 0:
                 print("loss:", loss.item())
-                print("d_idle:", d_idle)
+                # print("d_idle:", d_idle)
                 print("sum_reward:", self.sum_reward[0], episode)
             if (episode + 1) % 5 == 0:
                 self.episode = episode
                 self.save_model(self.model_name)
 
-                self.save_info(self.r_l, f"r_l_{self.model_name}",
-                               ['reward', 'loss', 'ep'], "r_l")
-
-                self.save_info(self.idle_total, f"i_t_{self.model_name}",
-                               ['d_idle', 'p_idle', 'idle', 'ep'], "i_t")
+                # self.save_info(self.r_l, f"r_l_{self.model_name}",
+                #                ['reward', 'loss', 'ep'], "r_l")
+                #
+                # self.save_info(self.idle_total, f"i_t_{self.model_name}",
+                #                ['d_idle', 'p_idle', 'idle', 'ep'], "i_t")
                 self.r_l = []
                 self.idle_total = []
 
@@ -227,6 +212,34 @@ class Trainer:
             # log_prob = log_probs.view(self.jobs,)[action]
 
             return action.item(), value, policy_head.log_prob(action)
+
+    def get_idle_time(self, episode):
+        p_idle_list = []
+        d_idle_list = []
+        total_idle_time_list = []
+        total_idle = []
+        for env in self.envs:
+            p_idle = int(np.sum(env.p_total_idle_time))
+            d_idle = int(np.sum(env.d_total_idle_time))
+
+            total_idle_time = int(p_idle + d_idle)
+            # total_time = env.d_total_time + env.p_total_time
+            d_idle_list.append(d_idle)
+            p_idle_list.append(p_idle)
+            total_idle_time_list.append(total_idle_time)
+            env.reset()
+        p_sum_idle = sum(p_idle_list)
+        p_mean_idle = np.mean(p_idle_list)
+        d_sum_idle = sum(d_idle_list)
+        d_mean_idle = np.mean(d_idle_list)
+        p_idle_list.append(p_sum_idle)
+        p_idle_list.append(p_mean_idle)
+        d_idle_list.append(d_sum_idle)
+        d_idle_list.append(d_mean_idle)
+        total_idle.append(p_idle_list)
+        total_idle.append(d_idle_list)
+        total_idle.append(episode)
+        self.idle_total.append(total_idle)
 
     def save_model(self, file_name):
         # torch.save(self.model.actor.state_dict(), f'./net/params/actor.pth')
