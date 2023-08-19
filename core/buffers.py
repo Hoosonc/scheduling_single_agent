@@ -17,6 +17,7 @@ class Buffer:
         self.terminal_list = []
         self.value_list = []
         self.q_list = []
+        self.q_next = []
         self.log_prob_list = []
         self.candidate_list = []
         self.adv = None
@@ -31,7 +32,8 @@ class Buffer:
         self.state_list.append(state_t)
         # self.candidate_list.append(candidate)
         # self.edge_list.append(edge_t)
-        self.q_list.append(q)
+        if q is not None:
+            self.q_list.append(q)
         self.action_list.append(action_t)
         self.reward_list.append(reward_t)
         self.terminal_list.append(terminal_t)
@@ -71,7 +73,6 @@ class Buffer:
             delta = v - values[i]
             deltas.append(delta.view(1, -1))
         self.returns = torch.cat(list(reversed(returns)), dim=1)
-
         deltas = torch.cat(list(reversed(deltas)), dim=0)
         advantage = deltas[-1, :]
         advantages = [advantage.view(1, -1)]
@@ -81,6 +82,9 @@ class Buffer:
         advantages = torch.cat(list(reversed(advantages)), dim=0).view(-1, rewards.shape[0])
         self.adv = f.normalize(advantages, p=2, dim=1)
         del self.value_list[-1]
+        if len(self.q_list) > 0:
+            self.q_next = self.q_list[1:]
+            self.q_next.append(torch.tensor([0]).view(1, 1).to(device))
 
 
 class BatchBuffer:
@@ -100,6 +104,8 @@ class BatchBuffer:
         self.values = None
         self.log_prob = None
         self.adv = None
+        self.q_list = None
+        self.q_next = None
 
     def reset(self):
         self.buffer_list = [Buffer(self.gamma, self.lam) for _ in range(self.buffer_num)]
@@ -113,6 +119,8 @@ class BatchBuffer:
         self.values = None
         self.log_prob = None
         self.adv = None
+        self.q_list = None
+        self.q_next = None
 
     def add_batch_data(self, states_t=None, actions_t=None,
                        rewards_t=None, terminals_t=None, values_t=None, log_prob_t=None):
@@ -133,6 +141,8 @@ class BatchBuffer:
         log_prob_list = []
         adv_list = []
         return_list = []
+        q_list = []
+        q_next = []
         for buf in self.buffer_list:
             state_list.extend(buf.state_list)
             edge_list.extend(buf.edge_list)
@@ -141,6 +151,8 @@ class BatchBuffer:
             value_list.extend(buf.value_list)
             log_prob_list.extend(buf.log_prob_list)
             reward_list.extend(buf.reward_list)
+            q_list.extend(buf.q_list)
+            q_next.extend(buf.q_next)
             # terminal_list.extend(buf.terminal_list)
             return_list.append(buf.returns)
             adv_list.append(buf.adv)
@@ -153,6 +165,10 @@ class BatchBuffer:
         # self.candidate = candidate_list
         self.log_prob = torch.cat([log_prob for log_prob in log_prob_list], dim=0).view(1, -1)
         self.values = torch.cat([value for value in value_list], dim=0).view(1, -1)
+        if q_list:
+            self.q_list = torch.cat([q for q in q_list], dim=0).view(1, -1)
+            self.q_next = torch.cat([q for q in q_next], dim=0).view(1, -1)
+
         # self.value_list = np.array(self.value_list)
         # self.log_prob_list = np.array(self.log_prob_list)
         self.rewards = np.array(reward_list)
@@ -195,3 +211,6 @@ class BatchBuffer:
                                                index=torch.tensor(select_index).to(device))
         buf.returns = torch.index_select(self.returns, dim=1, index=torch.tensor(select_index).to(device))
         buf.adv = torch.index_select(self.adv, dim=1, index=torch.tensor(select_index).to(device))
+        if self.q_list is not None:
+            buf.q_list = torch.index_select(self.q_list, dim=1, index=torch.tensor(select_index).to(device))
+            buf.q_next = torch.index_select(self.q_next, dim=1, index=torch.tensor(select_index).to(device))

@@ -40,7 +40,6 @@ def adjust_params():
 
 
 if __name__ == '__main__':
-    print("The RL program starts training...")
     adjust_params()
     # trainer = Trainer()
     # trainer.train()

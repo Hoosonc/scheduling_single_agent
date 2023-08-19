@@ -70,6 +70,7 @@ class Trainer:
         self.idle_total = []
         self.episode = 0
         self.sum_reward = []
+        self.returns = []
         self.model_name = f"{self.args.file_name}"
         # self.load_params(self.model_name)
 
@@ -92,20 +93,28 @@ class Trainer:
 
             self.get_idle_time(episode)
             # update net
-            if self.policy == "dqn":
-                loss = self.algorithm.learn(self.buffer)
-            else:
-                if self.policy == "ppo2":
-                    self.buffer.get_data()
+            self.buffer.get_data()
 
-                    mini_buffer = self.buffer.get_mini_batch(self.args.update_num)
-                    loss = 0
-                    for i in range(0, self.args.update_num):
-                        # self.env.reset()
-                        buf = mini_buffer[i]
-                        loss = self.algorithm.learn(buf)
-                else:
-                    loss = self.algorithm.learn(self.buffer.buffer_list[0])
+            mini_buffer = self.buffer.get_mini_batch(self.args.update_num)
+            loss = 0
+            for i in range(0, self.args.update_num):
+                # self.env.reset()
+                buf = mini_buffer[i]
+                loss = self.algorithm.learn(buf)
+            # if self.policy == "dqn":
+            #     loss = self.algorithm.learn(self.buffer)
+            # else:
+            #     if self.policy == "ppo2":
+            #         self.buffer.get_data()
+            #
+            #         mini_buffer = self.buffer.get_mini_batch(self.args.update_num)
+            #         loss = 0
+            #         for i in range(0, self.args.update_num):
+            #             # self.env.reset()
+            #             buf = mini_buffer[i]
+            #             loss = self.algorithm.learn(buf)
+            #     else:
+            #         loss = self.algorithm.learn(self.buffer.buffer_list[0])
             self.buffer.reset()
 
             # self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
@@ -180,6 +189,7 @@ class Trainer:
         if self.policy != "dqn":
             buffer.compute_reward_to_go_returns_adv()
         self.sum_reward.append(np.sum(buffer.reward_list))
+        self.returns.append(buffer.returns[0][0].item())
 
     def choose_action(self, data, env):
         if self.policy == "dqn":
