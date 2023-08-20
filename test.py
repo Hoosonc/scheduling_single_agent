@@ -42,15 +42,8 @@ def transition_time():
 
 
 if __name__ == '__main__':
-    np.random.seed(3)
-    a = []
-    for i in range(10):
-        a.append(None)
 
-    if None in a:
-        print(1)
-    else:
-        print(2)
+    print(0.9**30)
     # for i in range(10):
     #     a = np.random.permutation([2, 3, 8, 10])
     #     print(a)
