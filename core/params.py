@@ -15,7 +15,7 @@ class Params:
         self.lr_decay_list = [0.001, 0.0001]
         self.decay_episodes = []
         self.discount_rate = [0.99, 0.9, 1, 0.999]
-        self.policy_list = ["ppo2", "AC", "dqn"]
+        self.policy_list = ["dqn", "ppo2", "AC", "dqn"]
 
     def get_parser(self):
         self.parser.add_argument('--lr', type=float, default=0.01,

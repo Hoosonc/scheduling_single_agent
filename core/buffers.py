@@ -17,7 +17,9 @@ class Buffer:
         self.terminal_list = []
         self.value_list = []
         self.q_list = []
+        self.q_ = None
         self.q_next = []
+        self.q_returns = None
         self.log_prob_list = []
         self.candidate_list = []
         self.adv = None
@@ -57,6 +59,7 @@ class Buffer:
         rewards = torch.from_numpy(np.array(self.reward_list)).to(device).view(1, -1)
         values = torch.cat([value for value in self.value_list], dim=0).view(1, -1)
         log_prob = torch.cat([log_p for log_p in self.log_prob_list], dim=0).view(1, -1)
+
         self.log_prob = log_prob
         terminals = torch.from_numpy(np.array(self.terminal_list, dtype=int)).to(device).view(1, -1)
         rewards = torch.transpose(rewards, 1, 0)
@@ -85,6 +88,11 @@ class Buffer:
         if len(self.q_list) > 0:
             self.q_next = self.q_list[1:]
             self.q_next.append(torch.tensor([0]).view(1, 1).to(device))
+            self.q_ = torch.cat([q for q in self.q_list], dim=0).view(1, -1)
+            self.q_next = torch.cat([q for q in self.q_next], dim=0).view(1, -1)
+            n_steps = torch.from_numpy(np.arange(rewards.shape[0])).to(device).view(1, -1)
+            rewards = rewards.view(1, -1)
+            self.q_returns = rewards + (self.gamma ** n_steps) * (1 - terminals) * self.q_next
 
 
 class BatchBuffer:
@@ -105,7 +113,7 @@ class BatchBuffer:
         self.log_prob = None
         self.adv = None
         self.q_list = None
-        self.q_next = None
+        self.q_returns = None
 
     def reset(self):
         self.buffer_list = [Buffer(self.gamma, self.lam) for _ in range(self.buffer_num)]
@@ -120,7 +128,7 @@ class BatchBuffer:
         self.log_prob = None
         self.adv = None
         self.q_list = None
-        self.q_next = None
+        self.q_returns = None
 
     def add_batch_data(self, states_t=None, actions_t=None,
                        rewards_t=None, terminals_t=None, values_t=None, log_prob_t=None):
@@ -142,7 +150,7 @@ class BatchBuffer:
         adv_list = []
         return_list = []
         q_list = []
-        q_next = []
+        q_return_list = []
         for buf in self.buffer_list:
             state_list.extend(buf.state_list)
             edge_list.extend(buf.edge_list)
@@ -151,8 +159,10 @@ class BatchBuffer:
             value_list.extend(buf.value_list)
             log_prob_list.extend(buf.log_prob_list)
             reward_list.extend(buf.reward_list)
-            q_list.extend(buf.q_list)
-            q_next.extend(buf.q_next)
+
+            if buf.q_returns is not None:
+                q_list.append(buf.q_)
+                q_return_list.append(buf.q_returns)
             # terminal_list.extend(buf.terminal_list)
             return_list.append(buf.returns)
             adv_list.append(buf.adv)
@@ -165,9 +175,9 @@ class BatchBuffer:
         # self.candidate = candidate_list
         self.log_prob = torch.cat([log_prob for log_prob in log_prob_list], dim=0).view(1, -1)
         self.values = torch.cat([value for value in value_list], dim=0).view(1, -1)
-        if q_list:
+        if len(q_return_list) > 0:
             self.q_list = torch.cat([q for q in q_list], dim=0).view(1, -1)
-            self.q_next = torch.cat([q for q in q_next], dim=0).view(1, -1)
+            self.q_returns = torch.cat([ret for ret in q_return_list], dim=0).view(1, -1)
 
         # self.value_list = np.array(self.value_list)
         # self.log_prob_list = np.array(self.log_prob_list)
@@ -211,6 +221,6 @@ class BatchBuffer:
                                                index=torch.tensor(select_index).to(device))
         buf.returns = torch.index_select(self.returns, dim=1, index=torch.tensor(select_index).to(device))
         buf.adv = torch.index_select(self.adv, dim=1, index=torch.tensor(select_index).to(device))
-        if self.q_list is not None:
-            buf.q_list = torch.index_select(self.q_list, dim=1, index=torch.tensor(select_index).to(device))
-            buf.q_next = torch.index_select(self.q_next, dim=1, index=torch.tensor(select_index).to(device))
+        if self.q_returns is not None:
+            buf.q_ = torch.index_select(self.q_list, dim=1, index=torch.tensor(select_index).to(device))
+            buf.q_returns = torch.index_select(self.q_returns, dim=1, index=torch.tensor(select_index).to(device))
