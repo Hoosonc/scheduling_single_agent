@@ -120,7 +120,7 @@ class Trainer:
             # self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
             self.r_l.append([self.sum_reward[0], loss.item(), episode])
 
-            if self.scheduler is not None and (episode + 1) % 20 == 0:
+            if self.scheduler is not None:
                 self.scheduler.step()
 
             # print("episode:", episode)

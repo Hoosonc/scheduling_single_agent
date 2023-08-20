@@ -55,6 +55,7 @@ class Environment:
         self.tasks = None
         self.reward = None
         self.idle_total = []
+        self.sum_reward = None
 
     def reset(self):
         self.state = self.all_job_list.copy()
@@ -89,6 +90,7 @@ class Environment:
         self.tasks = []
         self.reward = 1.
         self.idle_total = []
+        self.sum_reward = None
 
     def step(self, action, step):
         reward = 0.
