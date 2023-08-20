@@ -14,7 +14,7 @@ class DQN_update:
         self.args = args
         self.gamma = args.gamma
         self.device = device
-        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.args.lr_v)
+        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.args.lr)
         self.loss_fn = nn.MSELoss()
 
     def learn(self, buffer):

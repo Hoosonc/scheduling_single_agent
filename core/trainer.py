@@ -186,10 +186,13 @@ class Trainer:
             data = Data(x=data, edge_index=edge_index, num_nodes=len(data))
             _, value, _ = self.model(data)
             buffer.value_list.append(value.view(1, 1).detach().to(device))
-        if self.policy != "dqn":
-            buffer.compute_reward_to_go_returns_adv()
+        # if self.policy != "dqn":
+        buffer.compute_reward_to_go_returns_adv()
         self.sum_reward.append(np.sum(buffer.reward_list))
-        self.returns.append(buffer.returns[0][0].item())
+        if self.policy == "dqn":
+            self.returns.append(buffer.q_returns[0][0].item())
+        else:
+            self.returns.append(buffer.returns[0][0].item())
 
     def choose_action(self, data, env):
         if self.policy == "dqn":

@@ -57,42 +57,44 @@ class Buffer:
         # (N,T) -> (T,N)   N:n_envs   T:trajectory_length
 
         rewards = torch.from_numpy(np.array(self.reward_list)).to(device).view(1, -1)
-        values = torch.cat([value for value in self.value_list], dim=0).view(1, -1)
-        log_prob = torch.cat([log_p for log_p in self.log_prob_list], dim=0).view(1, -1)
-
-        self.log_prob = log_prob
         terminals = torch.from_numpy(np.array(self.terminal_list, dtype=int)).to(device).view(1, -1)
-        rewards = torch.transpose(rewards, 1, 0)
-        values = torch.transpose(values, 1, 0)
-        terminals = torch.transpose(terminals, 1, 0)
-        r = values[-1]
-        returns = []
-        deltas = []
-        for i in reversed(range(rewards.shape[0])):
-            r = rewards[i] + (1. - terminals[i]) * self.gamma * r
-            returns.append(r.view(-1, 1))
-
-            v = rewards[i] + (1. - terminals[i]) * self.gamma * values[i + 1]
-            delta = v - values[i]
-            deltas.append(delta.view(1, -1))
-        self.returns = torch.cat(list(reversed(returns)), dim=1)
-        deltas = torch.cat(list(reversed(deltas)), dim=0)
-        advantage = deltas[-1, :]
-        advantages = [advantage.view(1, -1)]
-        for i in reversed(range(rewards.shape[0] - 1)):
-            advantage = deltas[i] + (1. - terminals[i]) * self.gamma * self.lam * advantage
-            advantages.append(advantage.view(1, -1))
-        advantages = torch.cat(list(reversed(advantages)), dim=0).view(-1, rewards.shape[0])
-        self.adv = f.normalize(advantages, p=2, dim=1)
-        del self.value_list[-1]
         if len(self.q_list) > 0:
             self.q_next = self.q_list[1:]
             self.q_next.append(torch.tensor([0]).view(1, 1).to(device))
             self.q_ = torch.cat([q for q in self.q_list], dim=0).view(1, -1)
             self.q_next = torch.cat([q for q in self.q_next], dim=0).view(1, -1)
             n_steps = torch.from_numpy(np.arange(rewards.shape[0])).to(device).view(1, -1)
-            rewards = rewards.view(1, -1)
+            # rewards = rewards.view(1, -1)
             self.q_returns = rewards + (self.gamma ** n_steps) * (1 - terminals) * self.q_next
+        else:
+            values = torch.cat([value for value in self.value_list], dim=0).view(1, -1)
+            log_prob = torch.cat([log_p for log_p in self.log_prob_list], dim=0).view(1, -1)
+
+            self.log_prob = log_prob
+
+            rewards = torch.transpose(rewards, 1, 0)
+            values = torch.transpose(values, 1, 0)
+            terminals = torch.transpose(terminals, 1, 0)
+            r = values[-1]
+            returns = []
+            deltas = []
+            for i in reversed(range(rewards.shape[0])):
+                r = rewards[i] + (1. - terminals[i]) * self.gamma * r
+                returns.append(r.view(-1, 1))
+
+                v = rewards[i] + (1. - terminals[i]) * self.gamma * values[i + 1]
+                delta = v - values[i]
+                deltas.append(delta.view(1, -1))
+            self.returns = torch.cat(list(reversed(returns)), dim=1)
+            deltas = torch.cat(list(reversed(deltas)), dim=0)
+            advantage = deltas[-1, :]
+            advantages = [advantage.view(1, -1)]
+            for i in reversed(range(rewards.shape[0] - 1)):
+                advantage = deltas[i] + (1. - terminals[i]) * self.gamma * self.lam * advantage
+                advantages.append(advantage.view(1, -1))
+            advantages = torch.cat(list(reversed(advantages)), dim=0).view(-1, rewards.shape[0])
+            self.adv = f.normalize(advantages, p=2, dim=1)
+            del self.value_list[-1]
 
 
 class BatchBuffer:
@@ -173,17 +175,18 @@ class BatchBuffer:
         # self.edges_attr = np.array(edge_attr_list)
         self.actions = np.array(action_list)
         # self.candidate = candidate_list
-        self.log_prob = torch.cat([log_prob for log_prob in log_prob_list], dim=0).view(1, -1)
-        self.values = torch.cat([value for value in value_list], dim=0).view(1, -1)
         if len(q_return_list) > 0:
             self.q_list = torch.cat([q for q in q_list], dim=0).view(1, -1)
             self.q_returns = torch.cat([ret for ret in q_return_list], dim=0).view(1, -1)
+        else:
 
+            self.log_prob = torch.cat([log_prob for log_prob in log_prob_list], dim=0).view(1, -1)
+            self.values = torch.cat([value for value in value_list], dim=0).view(1, -1)
+            self.returns = torch.cat(return_list, dim=1)
+            self.adv = torch.cat(adv_list, dim=1)
         # self.value_list = np.array(self.value_list)
         # self.log_prob_list = np.array(self.log_prob_list)
         self.rewards = np.array(reward_list)
-        self.returns = torch.cat(return_list, dim=1)
-        self.adv = torch.cat(adv_list, dim=1)
 
     def get_mini_batch(self, update_num):
         mini_buffer = [Buffer(self.gamma, self.lam) for _ in range(update_num)]
@@ -209,18 +212,21 @@ class BatchBuffer:
 
         for index in select_index:
             buf.state_list.append(self.states[index])
+        if self.q_returns is not None:
+            buf.q_ = torch.index_select(self.q_list, dim=1, index=torch.tensor(select_index).to(device))
+            buf.q_returns = torch.index_select(self.q_returns, dim=1, index=torch.tensor(select_index).to(device))
+        else:
+            buf.value_list = torch.index_select(self.values.view(1, -1), dim=1,
+                                                index=torch.tensor(select_index).to(device))
+            buf.log_prob_list = torch.index_select(self.log_prob.view(1, -1), dim=1,
+                                                   index=torch.tensor(select_index).to(device))
+            buf.returns = torch.index_select(self.returns, dim=1, index=torch.tensor(select_index).to(device))
+            buf.adv = torch.index_select(self.adv, dim=1, index=torch.tensor(select_index).to(device))
             # buf.candidate_list.append(self.candidate[index])
         # buf.edge_attr_list = self.edges_attr[select_index]
         buf.action_list = self.actions[select_index]
 
         buf.reward_list = self.rewards[select_index]
 
-        buf.value_list = torch.index_select(self.values.view(1, -1), dim=1,
-                                            index=torch.tensor(select_index).to(device))
-        buf.log_prob_list = torch.index_select(self.log_prob.view(1, -1), dim=1,
-                                               index=torch.tensor(select_index).to(device))
-        buf.returns = torch.index_select(self.returns, dim=1, index=torch.tensor(select_index).to(device))
-        buf.adv = torch.index_select(self.adv, dim=1, index=torch.tensor(select_index).to(device))
-        if self.q_returns is not None:
-            buf.q_ = torch.index_select(self.q_list, dim=1, index=torch.tensor(select_index).to(device))
-            buf.q_returns = torch.index_select(self.q_returns, dim=1, index=torch.tensor(select_index).to(device))
+
+
