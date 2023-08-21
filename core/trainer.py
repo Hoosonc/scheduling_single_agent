@@ -102,14 +102,15 @@ class Trainer:
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            if episode % 1 == 0:
-                print("loss:", loss.item())
-                print("sum_reward:", self.rewards_list)
-                print("returns:", self.returns)
-                print("p_idle:", self.p_total_idle)
-                print("d_idle:", self.d_total_idle)
-            if (episode + 1) % 1 == 0:
+            # if episode % 1 == 0:
+            #     print("loss:", loss.item())
+            #     print("sum_reward:", self.rewards_list)
+            #     print("returns:", self.returns)
+            #     print("p_idle:", self.p_total_idle)
+            #     print("d_idle:", self.d_total_idle)
+            if (episode + 1) % 60 == 0:
                 self.save_data(episode)
+                self.save_model(self.model_name)
 
     def step(self, env, i):
         buffer = self.buffer.buffer_list[i]
@@ -210,7 +211,7 @@ class Trainer:
             d_idle = int(np.sum(env.d_total_idle_time))
 
             rewards.append(env.sum_reward)
-            returns.append(env.returns.item())
+            returns.append(env.returns)
 
             total_idle_time = int(p_idle + d_idle)
             # total_time = env.d_total_time + env.p_total_time
@@ -251,17 +252,17 @@ class Trainer:
 
             d_idle_header = [f"d_idle_{i}" for i in range(len(self.envs))]
             d_idle_header.extend(["sum_d_idle", "mean_d_idle", "ep"])
-            self.csv_writer.write_headers(f"p_idle_{self.model_name}", d_idle_header, "./data/d_idle")
+            self.csv_writer.write_headers(f"d_idle_{self.model_name}", d_idle_header, "./data/d_idle")
 
             self.w_header = False
         self.episode = episode
         self.save_model(self.model_name)
 
-        self.csv_writer.write_result(self.loss, f"loss_{self.model_name}", "loss")
+        self.csv_writer.write_result(self.loss, f"loss_{self.model_name}", "./data/loss")
         self.csv_writer.write_result(self.rewards_list, f"rewards_{self.model_name}", "./data/rewards")
-        self.csv_writer.write_result(self.returns, f"rewards_{self.model_name}", "./data/returns")
-        self.csv_writer.write_result(self.p_total_idle, f"rewards_{self.model_name}", "./data/p_idle")
-        self.csv_writer.write_result(self.d_total_idle, f"rewards_{self.model_name}", "./data/d_idle")
+        self.csv_writer.write_result(self.returns, f"returns_{self.model_name}", "./data/returns")
+        self.csv_writer.write_result(self.p_total_idle, f"p_idle_{self.model_name}", "./data/p_idle")
+        self.csv_writer.write_result(self.d_total_idle, f"d_idle_{self.model_name}", "./data/d_idle")
         self.loss = []
         self.rewards_list = []
         self.returns = []

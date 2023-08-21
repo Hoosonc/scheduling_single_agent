@@ -3,15 +3,10 @@
 # @Author : hxc
 # @File : env.py
 # @Software : PyCharm
-# import random
-# import matplotlib.pyplot as plt
-import random
 
 import numpy as np
 import torch
-# import torch.nn.functional as f
-import pandas as pd
-from tools.get_data_txt import get_data_txt, get_data_csv
+from tools.get_data_txt import get_data_csv
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -128,7 +123,7 @@ class Environment:
 
                 patient_idle_time = self.cal_p_idle(pid)
 
-                # reward += (patient_idle_time - self.p_total_idle_time[pid])
+                reward += (patient_idle_time - self.p_total_idle_time[pid])
                 self.p_total_idle_time[pid] = patient_idle_time
                 total_idle_time_p = np.sum(self.p_total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
@@ -139,6 +134,8 @@ class Environment:
 
         if sum(self.state[:, 4]) == 0:
             self.done = True
+        if reward < 0:
+            print("========================================")
 
         return self.done, reward
 
