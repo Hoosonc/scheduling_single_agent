@@ -190,9 +190,9 @@ class Trainer:
         buffer.compute_reward_to_go_returns_adv()
         env.sum_reward = np.sum(buffer.reward_list)
         if self.policy == "dqn":
-            self.returns.append(buffer.q_returns[0][0].item())
+            env.returns = buffer.q_returns[0][0].item()
         else:
-            self.returns.append(buffer.returns[0][0].item())
+            env.returns = buffer.returns[0][0].item()
 
     def choose_action(self, data, env):
         if self.policy == "dqn":
@@ -231,9 +231,14 @@ class Trainer:
         d_idle_list = []
         total_idle_time_list = []
         total_idle = []
+        rewards = []
+        returns = []
         for env in self.envs:
             p_idle = int(np.sum(env.p_total_idle_time))
             d_idle = int(np.sum(env.d_total_idle_time))
+
+            rewards.append(env.sum_reward)
+            returns.append(env.returns)
 
             total_idle_time = int(p_idle + d_idle)
             # total_time = env.d_total_time + env.p_total_time
@@ -252,6 +257,10 @@ class Trainer:
         total_idle.append(p_idle_list)
         total_idle.append(d_idle_list)
         total_idle.append(episode)
+
+        mean_rewards = np.mean(rewards)
+        mean_returns = np.mean(returns)
+
         self.idle_total.append(total_idle)
 
     def save_model(self, file_name):
