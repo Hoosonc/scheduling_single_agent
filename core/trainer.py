@@ -97,7 +97,6 @@ class Trainer:
 
             self.buffer.reset()
 
-            # self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
             self.loss.append([loss.item(), episode])
 
             if self.scheduler is not None:
@@ -105,26 +104,12 @@ class Trainer:
 
             if episode % 1 == 0:
                 print("loss:", loss.item())
-                print("sum_reward:", self.sum_reward[0], episode)
+                print("sum_reward:", self.rewards_list)
+                print("returns:", self.returns)
+                print("p_idle:", self.p_total_idle)
+                print("d_idle:", self.d_total_idle)
             if (episode + 1) % 1 == 0:
-                if self.w_header:
-                    self.csv_writer.write_headers(f"loss_{self.model_name}", ['loss', 'ep'], "./data/loss")
-                    rewards_header = [f"rewards_{i}" for i in range(len(self.envs))]
-                    rewards_header.extend(["sum_rewards", "mean_rewards", "ep"])
-                    self.csv_writer.write_headers(f"rewards_{self.model_name}", ['loss', 'ep'], "./data/rewards")
-                    rewards_header = [f"returns_{i}" for i in range(len(self.envs))]
-                    rewards_header.extend(["sum_returns", "mean_returns", "ep"])
-                    self.csv_writer.write_headers(f"returns_{self.model_name}", ['loss', 'ep'], "./data/returns")
-                self.episode = episode
-                self.save_model(self.model_name)
-
-                self.csv_writer.write_result(self.loss, f"loss_{self.model_name}", "loss")
-
-                self.csv_writer.write_result(self.rewards_list, f"rewards_{self.model_name}", "rewards")
-                # self.save_info(self.idle_total, f"i_t_{self.model_name}",
-                #                ['d_idle', 'p_idle', 'idle', 'ep'], "i_t")
-
-                self.idle_total = []
+                self.save_data(episode)
 
     def step(self, env, i):
         buffer = self.buffer.buffer_list[i]
@@ -249,3 +234,36 @@ class Trainer:
 
     def load_params(self, model_name):
         self.model.load_state_dict(torch.load(f"./net/params/{model_name}.pth"))
+
+    def save_data(self, episode):
+        if self.w_header:
+            self.csv_writer.write_headers(f"loss_{self.model_name}", ['loss', 'ep'], "./data/loss")
+            rewards_header = [f"rewards_{i}" for i in range(len(self.envs))]
+            rewards_header.extend(["sum_rewards", "mean_rewards", "ep"])
+            self.csv_writer.write_headers(f"rewards_{self.model_name}", rewards_header, "./data/rewards")
+            returns_header = [f"returns_{i}" for i in range(len(self.envs))]
+            returns_header.extend(["sum_returns", "mean_returns", "ep"])
+            self.csv_writer.write_headers(f"returns_{self.model_name}", returns_header, "./data/returns")
+
+            p_idle_header = [f"p_idle_{i}" for i in range(len(self.envs))]
+            p_idle_header.extend(["sum_p_idle", "mean_p_idle", "ep"])
+            self.csv_writer.write_headers(f"p_idle_{self.model_name}", p_idle_header, "./data/p_idle")
+
+            d_idle_header = [f"d_idle_{i}" for i in range(len(self.envs))]
+            d_idle_header.extend(["sum_d_idle", "mean_d_idle", "ep"])
+            self.csv_writer.write_headers(f"p_idle_{self.model_name}", d_idle_header, "./data/d_idle")
+
+            self.w_header = False
+        self.episode = episode
+        self.save_model(self.model_name)
+
+        self.csv_writer.write_result(self.loss, f"loss_{self.model_name}", "loss")
+        self.csv_writer.write_result(self.rewards_list, f"rewards_{self.model_name}", "./data/rewards")
+        self.csv_writer.write_result(self.returns, f"rewards_{self.model_name}", "./data/returns")
+        self.csv_writer.write_result(self.p_total_idle, f"rewards_{self.model_name}", "./data/p_idle")
+        self.csv_writer.write_result(self.d_total_idle, f"rewards_{self.model_name}", "./data/d_idle")
+        self.loss = []
+        self.rewards_list = []
+        self.returns = []
+        self.p_total_idle = []
+        self.d_total_idle = []
