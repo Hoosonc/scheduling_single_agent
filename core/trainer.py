@@ -3,25 +3,14 @@
 # @Author : hxc
 # @File : trainer.py
 # @Software : PyCharm
-# import numpy as np
-# import math
-
 from core.env import Environment
 import numpy as np
 import torch
 from torch.distributions.categorical import Categorical
-# import gc
-# import torch.optim as opt
-import csv
+from tools.csv_tools import csv_writer
 from net.AC_model import AC
 from net.DQN_model import DQN
-# from multiprocessing import Queue
 from threading import Thread
-# from multiprocessing import Process
-
-# from net.cnn import CNN
-# from net.gcn_new import GCN
-# from net.utils import get_now_date as hxc
 from torch_geometric.data import Data
 from scipy.sparse import coo_matrix
 from core.buffers import BatchBuffer
@@ -36,6 +25,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class Trainer:
     def __init__(self, args):
         self.args = args
+        self.csv_writer = csv_writer()
         self.policy = self.args.policy
         torch.manual_seed(self.args.seed)
         self.envs = [Environment(self.args, env_id) for env_id in range(self.args.env_num)]
@@ -63,15 +53,18 @@ class Trainer:
 
         self.scheduled_data = []
         # self.file_name = ""
-        self.reward_list = []
+        self.rewards_list = []
         self.terminal_list = []
-        self.r_l = []
+        self.loss = []
 
         self.idle_total = []
+        self.p_total_idle = []
+        self.d_total_idle = []
         self.episode = 0
         self.sum_reward = []
         self.returns = []
         self.model_name = f"{self.args.file_name}"
+        self.w_header = True
         # self.load_params(self.model_name)
 
         self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
@@ -91,7 +84,7 @@ class Trainer:
             for thread in t_list:
                 thread.join()
 
-            self.get_idle_time(episode)
+            self.get_results(episode)
             # update net
             self.buffer.get_data()
 
@@ -101,44 +94,36 @@ class Trainer:
                 # self.env.reset()
                 buf = mini_buffer[i]
                 loss = self.algorithm.learn(buf)
-            # if self.policy == "dqn":
-            #     loss = self.algorithm.learn(self.buffer)
-            # else:
-            #     if self.policy == "ppo2":
-            #         self.buffer.get_data()
-            #
-            #         mini_buffer = self.buffer.get_mini_batch(self.args.update_num)
-            #         loss = 0
-            #         for i in range(0, self.args.update_num):
-            #             # self.env.reset()
-            #             buf = mini_buffer[i]
-            #             loss = self.algorithm.learn(buf)
-            #     else:
-            #         loss = self.algorithm.learn(self.buffer.buffer_list[0])
+
             self.buffer.reset()
 
             # self.r_l.append([self.sum_reward[0], self.sum_reward[1], loss.item(), episode])
-            self.r_l.append([self.sum_reward[0], loss.item(), episode])
+            self.loss.append([loss.item(), episode])
 
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            # print("episode:", episode)
-            # print("总时间：", self.env.get_total_time())
             if episode % 1 == 0:
                 print("loss:", loss.item())
-                # print("d_idle:", d_idle)
                 print("sum_reward:", self.sum_reward[0], episode)
-            if (episode + 1) % 5 == 0:
+            if (episode + 1) % 1 == 0:
+                if self.w_header:
+                    self.csv_writer.write_headers(f"loss_{self.model_name}", ['loss', 'ep'], "./data/loss")
+                    rewards_header = [f"rewards_{i}" for i in range(len(self.envs))]
+                    rewards_header.extend(["sum_rewards", "mean_rewards", "ep"])
+                    self.csv_writer.write_headers(f"rewards_{self.model_name}", ['loss', 'ep'], "./data/rewards")
+                    rewards_header = [f"returns_{i}" for i in range(len(self.envs))]
+                    rewards_header.extend(["sum_returns", "mean_returns", "ep"])
+                    self.csv_writer.write_headers(f"returns_{self.model_name}", ['loss', 'ep'], "./data/returns")
                 self.episode = episode
                 self.save_model(self.model_name)
 
-                self.save_info(self.r_l, f"r_l_{self.model_name}",
-                               ['reward', 'returns', 'loss', 'ep'], "r_l")
-                #
+                self.csv_writer.write_result(self.loss, f"loss_{self.model_name}", "loss")
+
+                self.csv_writer.write_result(self.rewards_list, f"rewards_{self.model_name}", "rewards")
                 # self.save_info(self.idle_total, f"i_t_{self.model_name}",
                 #                ['d_idle', 'p_idle', 'idle', 'ep'], "i_t")
-                self.r_l = []
+
                 self.idle_total = []
 
     def step(self, env, i):
@@ -226,19 +211,21 @@ class Trainer:
 
             return action.item(), value, policy_head.log_prob(action)
 
-    def get_idle_time(self, episode):
+    def get_results(self, episode):
         p_idle_list = []
+
         d_idle_list = []
         total_idle_time_list = []
-        total_idle = []
         rewards = []
         returns = []
+        self.episode = episode
+
         for env in self.envs:
             p_idle = int(np.sum(env.p_total_idle_time))
             d_idle = int(np.sum(env.d_total_idle_time))
 
             rewards.append(env.sum_reward)
-            returns.append(env.returns)
+            returns.append(env.returns.item())
 
             total_idle_time = int(p_idle + d_idle)
             # total_time = env.d_total_time + env.p_total_time
@@ -246,43 +233,19 @@ class Trainer:
             p_idle_list.append(p_idle)
             total_idle_time_list.append(total_idle_time)
             env.reset()
-        p_sum_idle = sum(p_idle_list)
-        p_mean_idle = np.mean(p_idle_list)
-        d_sum_idle = sum(d_idle_list)
-        d_mean_idle = np.mean(d_idle_list)
-        p_idle_list.append(p_sum_idle)
-        p_idle_list.append(p_mean_idle)
-        d_idle_list.append(d_sum_idle)
-        d_idle_list.append(d_mean_idle)
-        total_idle.append(p_idle_list)
-        total_idle.append(d_idle_list)
-        total_idle.append(episode)
+        self.p_total_idle.append(self.get_result(p_idle_list))
+        self.d_total_idle.append(self.get_result(d_idle_list))
+        self.rewards_list.append(self.get_result(rewards))
+        self.returns.append(self.get_result(returns))
 
-        mean_rewards = np.mean(rewards)
-        mean_returns = np.mean(returns)
-
-        self.idle_total.append(total_idle)
+    def get_result(self, result_list):
+        sum_ = sum(result_list)
+        mean_ = np.mean(result_list)
+        result_list.extend([sum_, mean_, self.episode])
+        return result_list
 
     def save_model(self, file_name):
-        # torch.save(self.model.actor.state_dict(), f'./net/params/actor.pth')
-        # torch.save(self.model.critic.state_dict(), f'./net/params/critic.pth')
         torch.save(self.model.state_dict(), f'./net/params/{file_name}.pth')
 
     def load_params(self, model_name):
         self.model.load_state_dict(torch.load(f"./net/params/{model_name}.pth"))
-
-    def save_data(self, file_name):
-        with open(f'./data/save_data/{file_name}.csv', mode='w+', encoding='utf-8-sig', newline='') as f:
-            csv_writer = csv.writer(f)
-            headers = ['did', 'pid', 'start_time', 'pro_time', 'finish_time', "step", "job_id"]
-            csv_writer.writerow(headers)
-            csv_writer.writerows(self.scheduled_data)
-            print(f'{file_name}')
-
-    def save_info(self, data_list, file_name, headers, path):
-        with open(f'./data/{path}/{file_name}_{self.policy}_{self.net_name}.csv', mode='a+', encoding='utf-8-sig', newline='') as f:
-            csv_writer = csv.writer(f)
-            if (self.episode + 1) == 5:
-                csv_writer.writerow(headers)
-            csv_writer.writerows(data_list)
-            # print(f'{file_name}')
