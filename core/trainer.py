@@ -133,8 +133,8 @@ class Trainer:
                 self.episode = episode
                 self.save_model(self.model_name)
 
-                # self.save_info(self.r_l, f"r_l_{self.model_name}",
-                #                ['reward', 'loss', 'ep'], "r_l")
+                self.save_info(self.r_l, f"r_l_{self.model_name}",
+                               ['reward', 'returns', 'loss', 'ep'], "r_l")
                 #
                 # self.save_info(self.idle_total, f"i_t_{self.model_name}",
                 #                ['d_idle', 'p_idle', 'idle', 'ep'], "i_t")
@@ -188,7 +188,7 @@ class Trainer:
             buffer.value_list.append(value.view(1, 1).detach().to(device))
         # if self.policy != "dqn":
         buffer.compute_reward_to_go_returns_adv()
-        self.sum_reward.append(np.sum(buffer.reward_list))
+        env.sum_reward = np.sum(buffer.reward_list)
         if self.policy == "dqn":
             self.returns.append(buffer.q_returns[0][0].item())
         else:
@@ -257,7 +257,7 @@ class Trainer:
     def save_model(self, file_name):
         # torch.save(self.model.actor.state_dict(), f'./net/params/actor.pth')
         # torch.save(self.model.critic.state_dict(), f'./net/params/critic.pth')
-        torch.save(self.model.state_dict(), f'./net/params/{file_name}_{self.policy}_{self.net_name}.pth')
+        torch.save(self.model.state_dict(), f'./net/params/{file_name}.pth')
 
     def load_params(self, model_name):
         self.model.load_state_dict(torch.load(f"./net/params/{model_name}.pth"))
