@@ -43,13 +43,8 @@ def transition_time():
 
 if __name__ == '__main__':
 
-    df1 = pd.read_csv("E:\\微信\\WeChat\\Documents\\WeChat Files\\wxid_55m6wgx2of0x22\\FileStorage\\File\\2023-08\\Diagnose_new.csv")
-    df1['date'] = pd.to_datetime(df1['date'])
-    df2 = pd.read_csv(
-        "E:\\微信\\WeChat\\Documents\\WeChat Files\\wxid_55m6wgx2of0x22\\FileStorage\\File\\2023-08\\Diagnose_with_6_hospitals.csv")
-    df2['date'] = pd.to_datetime(df2['date'])
-    df = pd.merge(df1, df2, how="outer", on="date")
-    df.to_csv("final.csv", index=False)
+    a = [1, 2, 3, 4, 5]
+    print(a[: -1])
     # for i in range(10):
     #     a = np.random.permutation([2, 3, 8, 10])
     #     print(a)

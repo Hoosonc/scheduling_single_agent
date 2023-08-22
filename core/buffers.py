@@ -35,7 +35,7 @@ class Buffer:
         self.state_list.append(state_t)
         # self.candidate_list.append(candidate)
         # self.edge_list.append(edge_t)
-        if q is not None:
+        if self.policy == "dqn":
             self.q_list.append(q)
         self.action_list.append(action_t)
         self.reward_list.append(reward_t)
@@ -59,7 +59,7 @@ class Buffer:
 
         rewards = torch.from_numpy(np.array(self.reward_list)).to(device).view(1, -1)
         terminals = torch.from_numpy(np.array(self.terminal_list, dtype=int)).to(device).view(1, -1)
-        if len(self.q_list) > 0:
+        if self.policy == "dqn":
             self.q_next = self.q_list[1:]
             self.q_next.append(torch.tensor([0]).view(1, 1).to(device))
             self.q_ = torch.cat([q for q in self.q_list], dim=0).view(1, -1)
@@ -67,6 +67,13 @@ class Buffer:
             n_steps = torch.from_numpy(np.arange(rewards.shape[0])).to(device).view(1, -1)
             # rewards = rewards.view(1, -1)
             self.q_returns = rewards + (self.gamma ** n_steps) * (1 - terminals) * self.q_next
+        elif self.policy == "ddpg":
+            values_next = torch.cat([value for value in self.value_list[1:]], dim=0).view(1, -1)
+            self.q_ = torch.cat([value for value in self.value_list[:-1]], dim=0).view(1, -1)
+            self.log_prob = torch.cat([q for q in self.log_prob_list], dim=0).view(1, -1)
+            n_steps = torch.from_numpy(np.arange(rewards.shape[0])).to(device).view(1, -1)
+            # rewards = rewards.view(1, -1)
+            self.q_returns = rewards + (self.gamma ** n_steps) * (1 - terminals) * values_next
         else:
             values = torch.cat([value for value in self.value_list], dim=0).view(1, -1)
             log_prob = torch.cat([log_p for log_p in self.log_prob_list], dim=0).view(1, -1)
@@ -100,6 +107,7 @@ class Buffer:
 
 class BatchBuffer:
     def __init__(self, buffer_num, gamma, lam, policy):
+        self.policy = policy
         self.buffer_num = buffer_num
         self.buffer_list = [Buffer(gamma, lam, policy) for _ in range(self.buffer_num)]
         # self.mini_buffer = None
@@ -119,7 +127,7 @@ class BatchBuffer:
         self.q_returns = None
 
     def reset(self):
-        self.buffer_list = [Buffer(self.gamma, self.lam) for _ in range(self.buffer_num)]
+        self.buffer_list = [Buffer(self.gamma, self.lam, self.policy) for _ in range(self.buffer_num)]
         # self.mini_buffer = None
         self.states = None
         self.edges = None
@@ -163,7 +171,7 @@ class BatchBuffer:
             log_prob_list.extend(buf.log_prob_list)
             reward_list.extend(buf.reward_list)
 
-            if buf.q_returns is not None:
+            if self.policy == "dqn":
                 q_list.append(buf.q_)
                 q_return_list.append(buf.q_returns)
             # terminal_list.extend(buf.terminal_list)
@@ -176,11 +184,10 @@ class BatchBuffer:
         # self.edges_attr = np.array(edge_attr_list)
         self.actions = np.array(action_list)
         # self.candidate = candidate_list
-        if len(q_return_list) > 0:
+        if self.policy == "dqn":
             self.q_list = torch.cat([q for q in q_list], dim=0).view(1, -1)
             self.q_returns = torch.cat([ret for ret in q_return_list], dim=0).view(1, -1)
         else:
-
             self.log_prob = torch.cat([log_prob for log_prob in log_prob_list], dim=0).view(1, -1)
             self.values = torch.cat([value for value in value_list], dim=0).view(1, -1)
             self.returns = torch.cat(return_list, dim=1)
@@ -190,7 +197,7 @@ class BatchBuffer:
         self.rewards = np.array(reward_list)
 
     def get_mini_batch(self, update_num):
-        mini_buffer = [Buffer(self.gamma, self.lam) for _ in range(update_num)]
+        mini_buffer = [Buffer(self.gamma, self.lam, self.policy) for _ in range(update_num)]
         t_list = []
         mini_size = (len(self.states) // update_num)
         if (mini_size * update_num) < len(self.states):
@@ -213,7 +220,7 @@ class BatchBuffer:
 
         for index in select_index:
             buf.state_list.append(self.states[index])
-        if self.q_returns is not None:
+        if self.policy == "dqn":
             buf.q_ = torch.index_select(self.q_list, dim=1, index=torch.tensor(select_index).to(device))
             buf.q_returns = torch.index_select(self.q_returns, dim=1, index=torch.tensor(select_index).to(device))
         else:

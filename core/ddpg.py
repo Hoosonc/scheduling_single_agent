@@ -19,7 +19,7 @@ class DDPG_update:
     def learn(self, buffer):
         q = buffer.log_prob
         q_returns = buffer.q_returns
-        actor_loss = -torch.mean(q, dim=-1)
+        actor_loss = -torch.mean(buffer.log_prob, dim=-1)
         critic_loss = 0.5*(q-q_returns).pow(2).sum()
 
         self.optimizer.zero_grad()
