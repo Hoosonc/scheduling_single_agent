@@ -17,6 +17,7 @@ from core.buffers import BatchBuffer
 from core.rl_algorithms import PPOClip
 from core.DQN import DQN_update
 from core.Actor_critic import AC_update
+from core.ddpg import DDPG_update
 from net.AC_GCN import AC_GCN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -38,8 +39,10 @@ class Trainer:
         if self.policy == "dqn":
             self.model = DQN().to(device)
             self.algorithm = DQN_update(self.model, device, self.args)
+        elif self.policy == "ddpg":
+            self.model = AC_GCN().to(device)
+            self.algorithm = DDPG_update(self.model, device, self.args)
         else:
-
             if self.net_name == "GCN":
                 self.model = AC_GCN().to(device)
             elif self.net_name == "GAT":
@@ -67,7 +70,7 @@ class Trainer:
         self.w_header = True
         # self.load_params(self.model_name)
 
-        self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda)
+        self.buffer = BatchBuffer(self.args.env_num, self.args.gamma, self.args.gae_lambda, self.policy)
 
     def train(self):
 

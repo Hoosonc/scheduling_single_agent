@@ -11,11 +11,12 @@ class Params:
         self.parser = argparse.ArgumentParser(description=None)
         self.get_parser()
         self.args = self.parser.parse_args()
-        self.lr_list = [0.0002, 0.00001]
-        self.lr_decay_list = [0.001, 0.0001]
+        # self.lr_list = [0.0002, 0.00001]
+        self.lr_list = [0.00001]
+        self.lr_decay_list = []  # [0.001, 0.0001]
         self.decay_episodes = []
-        self.discount_rate = [0.99, 0.9, 1, 0.999]
-        self.policy_list = ["ppo2", "AC", "dqn"]
+        self.discount_rate = [0.9]  # [0.99, 0.9, 1, 0.999]
+        self.policy_list = ["ppo2", "AC", "ddpg", "dqn"]
 
     def get_parser(self):
         self.parser.add_argument('--lr', type=float, default=0.01,

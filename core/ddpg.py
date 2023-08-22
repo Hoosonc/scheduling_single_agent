@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2023/5/21 8:25
+# @Time    : 2023/8/22 15:49
 # @Author  : hxc
-# @File    : DQN_model.py
+# @File    : ddpg.py
 # @Software: PyCharm
 import torch
 import torch.nn as nn
 
 
-class DQN_update:
+class DDPG_update:
     def __init__(self, net, device, args):
         self.net = net
         self.args = args
@@ -17,13 +17,13 @@ class DQN_update:
         self.loss_fn = nn.MSELoss()
 
     def learn(self, buffer):
-        q = buffer.q_
+        q = buffer.log_prob
         q_returns = buffer.q_returns
-
-        loss = 0.5*(q-q_returns).pow(2).sum()
+        actor_loss = -torch.mean(q, dim=-1)
+        critic_loss = 0.5*(q-q_returns).pow(2).sum()
 
         self.optimizer.zero_grad()
-
+        loss = actor_loss + critic_loss
         loss.backward()
 
         self.optimizer.step()

@@ -8,7 +8,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Buffer:
-    def __init__(self, gamma, lam):
+    def __init__(self, gamma, lam, policy):
         self.state_list = []
         self.edge_list = []
         self.edge_attr_list = []
@@ -27,6 +27,7 @@ class Buffer:
         self.gamma = gamma
         self.lam = lam
         self.log_prob = None
+        self.policy = policy
 
     def add_data(self, state_t=None, action_t=None, reward_t=None,
                  terminal_t=None, value_t=None, log_prob_t=None, q=None):
@@ -98,9 +99,9 @@ class Buffer:
 
 
 class BatchBuffer:
-    def __init__(self, buffer_num, gamma, lam):
+    def __init__(self, buffer_num, gamma, lam, policy):
         self.buffer_num = buffer_num
-        self.buffer_list = [Buffer(gamma, lam) for _ in range(self.buffer_num)]
+        self.buffer_list = [Buffer(gamma, lam, policy) for _ in range(self.buffer_num)]
         # self.mini_buffer = None
         self.gamma = gamma
         self.lam = lam
