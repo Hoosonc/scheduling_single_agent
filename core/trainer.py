@@ -90,13 +90,16 @@ class Trainer:
             self.get_results(episode)
             # update net
             self.buffer.get_data()
-
-            mini_buffer = self.buffer.get_mini_batch(self.args.update_num)
             loss = 0
-            for i in range(0, self.args.update_num):
-                # self.env.reset()
-                buf = mini_buffer[i]
-                loss = self.algorithm.learn(buf)
+            if self.policy == "ppo2":
+                mini_buffer = self.buffer.get_mini_batch(self.args.update_num)
+
+                for i in range(0, self.args.update_num):
+                    # self.env.reset()
+                    buf = mini_buffer[i]
+                    loss = self.algorithm.learn(buf)
+            else:
+                loss = self.algorithm.learn(self.buffer)
 
             self.buffer.reset()
 
@@ -163,7 +166,7 @@ class Trainer:
         # if self.policy != "dqn":
         buffer.compute_reward_to_go_returns_adv()
         env.sum_reward = np.sum(buffer.reward_list)
-        if self.policy == "dqn":
+        if self.policy == "dqn" or self.policy == "ddpg":
             env.returns = buffer.q_returns[0][0].item()
         else:
             env.returns = buffer.returns[0][0].item()

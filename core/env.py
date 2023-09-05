@@ -123,7 +123,7 @@ class Environment:
 
                 patient_idle_time = self.cal_p_idle(pid)
 
-                reward += (patient_idle_time - self.p_total_idle_time[pid])
+                # reward += (patient_idle_time - self.p_total_idle_time[pid])
                 self.p_total_idle_time[pid] = patient_idle_time
                 total_idle_time_p = np.sum(self.p_total_idle_time)
                 self.total_idle_time_p = total_idle_time_p

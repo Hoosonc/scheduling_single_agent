@@ -174,6 +174,9 @@ class BatchBuffer:
             if self.policy == "dqn":
                 q_list.append(buf.q_)
                 q_return_list.append(buf.q_returns)
+            if self.policy == "ddpg":
+
+                q_return_list.append(buf.q_returns)
             # terminal_list.extend(buf.terminal_list)
             return_list.append(buf.returns)
             adv_list.append(buf.adv)
@@ -190,8 +193,12 @@ class BatchBuffer:
         else:
             self.log_prob = torch.cat([log_prob for log_prob in log_prob_list], dim=0).view(1, -1)
             self.values = torch.cat([value for value in value_list], dim=0).view(1, -1)
-            self.returns = torch.cat(return_list, dim=1)
-            self.adv = torch.cat(adv_list, dim=1)
+
+            if self.policy == "ddpg":
+                self.q_returns = torch.cat([ret for ret in q_return_list], dim=0).view(1, -1)
+            else:
+                self.adv = torch.cat(adv_list, dim=1)
+                self.returns = torch.cat(return_list, dim=1)
         # self.value_list = np.array(self.value_list)
         # self.log_prob_list = np.array(self.log_prob_list)
         self.rewards = np.array(reward_list)

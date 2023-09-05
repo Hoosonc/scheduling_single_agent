@@ -17,7 +17,7 @@ class DQN_update:
         self.loss_fn = nn.MSELoss()
 
     def learn(self, buffer):
-        q = buffer.q_
+        q = buffer.q_list
         q_returns = buffer.q_returns
 
         loss = 0.5*(q-q_returns).pow(2).sum()

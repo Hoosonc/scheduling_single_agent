@@ -15,9 +15,9 @@ class AC_update:
 
     def learn(self, buffer):
         returns = buffer.returns
-        values = buffer.value_list
+        values = buffer.values
         adv = buffer.adv
-        log_probs = buffer.log_prob_list
+        log_probs = buffer.log_prob
         # log_probs = torch.cat([lg.view(1, 1) for lg in log_probs], dim=1)
         # values = torch.cat(values, dim=1)
         value_loss = 0.5*(values-returns).pow(2).mean()
