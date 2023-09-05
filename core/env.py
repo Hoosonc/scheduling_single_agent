@@ -17,7 +17,7 @@ class Environment:
         self.args = args
         self.env_id = env_id
         (self.all_job_list, self.jobs, self.machines,
-         self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(env_id)
+         self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(args.file_id)
         self.reg_num = self.all_job_list.shape[0]
         self.j_edge_matrix = None
         self.m_edge_matrix = None

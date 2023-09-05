@@ -111,7 +111,7 @@ class Trainer:
             #     print("returns:", self.returns)
             #     print("p_idle:", self.p_total_idle)
             #     print("d_idle:", self.d_total_idle)
-            if (episode + 1) % 60 == 0:
+            if (episode + 1) % 1 == 0:
                 self.save_data(episode)
                 self.save_model(self.model_name)
 
