@@ -16,7 +16,7 @@ class Params:
         self.lr_decay_list = [0.001, 0.0001]
         self.decay_episodes = []
         self.discount_rate = [0.99]  # [0.99, 0.9, 1, 0.999]
-        self.policy_list = ["dqn"]  # ["ppo2", "AC", "ddpg", "dqn"]
+        self.policy_list = ["ppo2", "AC", "ddpg", "dqn"]
 
     def get_parser(self):
         self.parser.add_argument('--lr', type=float, default=0.01,
@@ -45,7 +45,7 @@ class Params:
                                  help='')
         self.parser.add_argument('--mini_size', type=int, default=78,
                                  help='')
-        self.parser.add_argument('--episode', type=int, default=5,
+        self.parser.add_argument('--episode', type=int, default=6960,
                                  help='How many episode to train the RL algorithm')
         self.parser.add_argument('--reg-path', type=str, default='./data/10_300_358.csv',
                                  help='The path of Reg file')

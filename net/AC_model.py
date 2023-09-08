@@ -35,17 +35,26 @@ class AC(torch.nn.Module):
         self.conv3 = GATConv(in_channels=64, out_channels=32, heads=4, concat=False)
         self.Norm3 = nn.BatchNorm1d(32)
         self.conv4 = GATConv(in_channels=32, out_channels=1, heads=4, concat=False)
+        self.actor = nn.Sequential(
+            Linear(1, 64),
+            nn.LayerNorm(64),
+            nn.ReLU(),
+            Linear(64, 32),
+            nn.LayerNorm(32),
+            nn.ReLU(),
+            Linear(32, 1)
+        )
 
         self.critic = nn.Sequential(
             Linear(64, 32),
             nn.LayerNorm(32),
             # nn.Dropout(),
             nn.ReLU(),
-            Linear(32, 16),
-            nn.LayerNorm(16),
+            Linear(32, 32),
+            nn.LayerNorm(32),
             # nn.Dropout(),
             nn.ReLU(),
-            Linear(16, 1)
+            Linear(32, 1)
         )
         self.mini_bf_list = [mini_bf() for _ in range(20)]
 
@@ -61,8 +70,8 @@ class AC(torch.nn.Module):
         # x = f.dropout(x, training=True)
         pooled_x = global_mean_pool(x, None)
 
-        actor = self.conv4(self.Norm3(self.conv3(x, data.edge_index)), data.edge_index)
-
+        # actor = self.conv4(self.Norm3(self.conv3(x, data.edge_index)), data.edge_index)
+        actor = self.get_actor(data.x, x)
         value = self.critic(pooled_x).view(1, 1)
         # logits = torch.tanh(self.actor(concateFea)).view(1, -1)
         logits = torch.tanh(actor).view(1, -1)
@@ -70,6 +79,12 @@ class AC(torch.nn.Module):
         log_prob = f.log_softmax(logits, dim=1)
 
         return prob, value, log_prob
+
+    def get_actor(self, fea, emb_fea):
+        selected_rows = torch.where(fea[:, 1] == 1)[0]
+        filtered_second_tensor = emb_fea[selected_rows, :]
+        pooled_x = torch.mean(filtered_second_tensor, dim=1, keepdim=True)
+        return self.actor(pooled_x)
 
     def get_batch_p_v(self, buf):
         log_prob_list = []

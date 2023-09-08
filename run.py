@@ -14,23 +14,10 @@ def adjust_params():
     params = Params()
     n = 0
     file_list = []
-    for file_id in range(1):
+    for file_id in range(5):
         params.args.file_id = file_id
         for algorithm in params.policy_list:
             params.args.policy = algorithm
-            for lr in params.lr_list:
-                params.args.lr = lr
-                for dr in params.discount_rate:
-                    print(f"--algorithm:{algorithm} --lr:{lr} --discount rate:{dr} start training!")
-                    params.args.gamma = dr
-                    params.args.file_name = n
-                    trainer = Trainer(params.args)
-                    trainer.train()
-                    n += 1
-                    trainer.save_model(trainer.model_name)
-                    file_list.append([n, algorithm, lr, dr])
-                    print(f"--algorithm:{algorithm} --lr:{lr} --discount rate:{dr} training finished!")
-
             for lr in params.lr_decay_list:
                 params.args.lr = lr
                 for dr in params.discount_rate:
@@ -42,9 +29,22 @@ def adjust_params():
                     trainer.train()
                     n += 1
                     trainer.save_model(trainer.model_name)
-                    file_list.append([n, algorithm, lr, dr])
+                    file_list.append([n, file_id, algorithm, lr, dr])
                     print(f"--algorithm:{algorithm} --lr:{lr} --discount rate:{dr} training finished!")
-    df = pd.DataFrame(data=file_list, columns=["file", "algorithm", "lr", "dr"])
+            for lr in params.lr_list:
+                params.args.lr = lr
+                for dr in params.discount_rate:
+                    print(f"--algorithm:{algorithm} --lr:{lr} --discount rate:{dr} start training!")
+                    params.args.gamma = dr
+                    params.args.file_name = n
+                    trainer = Trainer(params.args)
+                    trainer.train()
+                    n += 1
+                    trainer.save_model(trainer.model_name)
+                    file_list.append([n, file_id, algorithm, lr, dr])
+                    print(f"--algorithm:{algorithm} --lr:{lr} --discount rate:{dr} training finished!")
+
+    df = pd.DataFrame(data=file_list, columns=["file", "file_id", "algorithm", "lr", "dr"])
     df.to_csv("./data/adjust_1.csv", index=False)
 
 

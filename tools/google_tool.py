@@ -152,12 +152,12 @@ if __name__ == '__main__':
     for file in files:
         start_time = time.perf_counter()
         d_idle_list = []
-        for i in range(100):
+        for i in range(1):
             total_time_d, total_time_p, d_idle, p_idle, total_idle = main(f"../data/simulation_instances/{file}")
             d_idle_list.append([p_idle, d_idle, total_idle, total_time_d])
 
         df = pd.DataFrame(data=d_idle_list, columns=["p_idle", "d_idle", "total_idle_time", "d_total_time"])
-        df.to_csv(f"../data/simulation_results/result_or_{file}", index=False)
+        df.to_csv(f"../data/simulation_results1/result_or_{file}", index=False)
         end_time = time.perf_counter()
         time_count = end_time - start_time
         print(file, time_count)

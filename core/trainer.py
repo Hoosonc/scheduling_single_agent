@@ -114,7 +114,7 @@ class Trainer:
             #     print("returns:", self.returns)
             #     print("p_idle:", self.p_total_idle)
             #     print("d_idle:", self.d_total_idle)
-            if (episode + 1) % 1 == 0:
+            if (episode + 1) % 60 == 0:
                 self.save_data(episode)
                 self.save_model(self.model_name)
 
@@ -123,7 +123,7 @@ class Trainer:
         done = False
         for step in range(300):
             data = env.state[:, [2, 4, 5, 6]].copy()
-            data[:, [0, 2, 3]] = data[:, [0, 2, 3]] / (env.jobs_length.mean()*2)
+            data[:, [0, 2, 3]] = data[:, [0, 2, 3]] / (env.jobs_length.max())
             m_edge_index = coo_matrix(env.m_edge_matrix)
             m_edge_index = np.array([m_edge_index.row, m_edge_index.col])
             np.fill_diagonal(env.j_edge_matrix, 0)
@@ -132,7 +132,7 @@ class Trainer:
             edge_index = np.concatenate([m_edge_index, j_edge_index], axis=1)
             data = torch.tensor(data, dtype=torch.float32).to(device)
             edge_index = torch.tensor(edge_index.astype("int64")).to(device)
-            # candidate = torch.tensor(env.candidate.copy().astype("int64")).to(device)
+
             data = Data(x=data, edge_index=edge_index, num_nodes=len(data))
             if self.policy == "dqn":
                 value, log_prob = 0, 0
@@ -187,21 +187,24 @@ class Trainer:
             return action.item(), q, 0
         else:
             prob, value, log_probs = self.model(data)
-            mask = (env.state[:, 4] == 1)
-            mask = torch.from_numpy(mask).to(device).view(1, -1)
-            # 将无效动作对应的概率值设置为0
-            masked_probs = prob * mask
+            # mask = (env.state[:, 4] == 1)
+            # mask = torch.from_numpy(mask).to(device).view(1, -1)
+            # # 将无效动作对应的概率值设置为0
+            # masked_probs = prob * mask
+            #
+            # # 将有效动作的概率值归一化
+            # valid_probs = masked_probs / masked_probs.sum(dim=1)
 
-            # 将有效动作的概率值归一化
-            valid_probs = masked_probs / masked_probs.sum(dim=1)
-
-            policy_head = Categorical(probs=valid_probs.view(1, -1))
+            policy_head = Categorical(probs=prob.view(1, -1))
             # action = policy_head.sample()
-            action = torch.argmax(valid_probs, dim=1)
+            action = torch.argmax(prob, dim=1)
+            # actions = policy_head.sample((5, ))
+            # ppp = policy_head.log_prob(actions)
 
             # log_prob = log_probs.view(self.jobs,)[action]
+            job_id = env.state[env.state[:, 4] == 1][action.item(), 3]
 
-            return action.item(), value, policy_head.log_prob(action)
+            return int(job_id), value, policy_head.log_prob(action)
 
     def get_results(self, episode):
         p_idle_list = []

@@ -17,7 +17,9 @@ class Environment:
         self.args = args
         self.env_id = env_id
         (self.all_job_list, self.jobs, self.machines,
-         self.max_time_op, self.jobs_length, self.sum_op, self.d_reg_num) = get_data_csv(args.file_id)
+         self.max_time_op, self.jobs_length, self.sum_op,
+         self.d_reg_num, self.p_all_task, self.d_all_task,
+         self.multi_tasks) = get_data_csv(args.file_id)
         self.reg_num = self.all_job_list.shape[0]
         self.j_edge_matrix = None
         self.m_edge_matrix = None
@@ -94,7 +96,6 @@ class Environment:
         if self.state[action][4] == 0:
             pass
         else:
-
             process_id = action
             did = int(self.state[action, 1])
             pid = int(self.state[process_id, 0])
@@ -123,12 +124,12 @@ class Environment:
 
                 patient_idle_time = self.cal_p_idle(pid)
 
-                # reward += (patient_idle_time - self.p_total_idle_time[pid])
+                reward += (patient_idle_time - self.p_total_idle_time[pid])
                 self.p_total_idle_time[pid] = patient_idle_time
                 total_idle_time_p = np.sum(self.p_total_idle_time)
                 self.total_idle_time_p = total_idle_time_p
 
-            reward = 1 - (reward/self.jobs_length.max())
+            reward = 1 - (reward/(self.jobs_length.max()))
             # print(reward)
             self.update_states(insert_data[2], pid, did, process_id)
 
@@ -154,17 +155,7 @@ class Environment:
             self.state[int(idx), 6] = insert_data[2]
         self.get_edge(pid, 0)
         self.get_edge(did, 1)
-        # self.action_mask[did] -= 1
-        # if self.action_mask[did] == 0:
-        #     pass
-        # else:
-        #     self.candidate[did] = self.random_sort[did][int(self.action_mask[did])]
 
-    # def get_total_time(self):
-    #     total_time = 0
-    #     for i in range(self.doctor.player_num):
-    #         total_time += self.doctor.schedule_list[i][int(self.doctor.free_pos[i] - 1)][3]
-    #     return total_time
     def get_edge(self, idx, col):
         temp_mtx = self.state[self.state[:, col] == idx].copy()
         earliest_start_times = np.unique(temp_mtx[:, 6])
