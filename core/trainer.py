@@ -40,7 +40,7 @@ class Trainer:
             self.model = DQN().to(device)
             self.algorithm = DQN_update(self.model, device, self.args)
         elif self.policy == "ddpg":
-            self.model = AC_GCN().to(device)
+            self.model = AC().to(device)
             self.algorithm = DDPG_update(self.model, device, self.args)
         else:
             if self.net_name == "GCN":
@@ -108,14 +108,14 @@ class Trainer:
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            if episode % 1 == 0:
+            # if episode % 1 == 0:
                 # print("loss:", loss.item())
-                print("sum_reward:", self.rewards_list[episode][0])
-                print("returns:", self.returns[episode][0])
-                print("total_idle", self.p_total_idle[episode][0]+self.d_total_idle[episode][0])
+                # print("sum_reward:", self.rewards_list[episode][0])
+                # print("returns:", self.returns[episode][0])
+                # print("total_idle", self.p_total_idle[episode][0]+self.d_total_idle[episode][0])
                 # print("p_idle:", self.p_total_idle[episode][0])
                 # print("d_idle:", self.d_total_idle[episode][0])
-            if (episode + 1) % 600 == 0:
+            if (episode + 1) % 60 == 0:
                 self.save_data(episode)
                 self.save_model(self.model_name)
 

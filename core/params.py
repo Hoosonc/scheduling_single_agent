@@ -39,7 +39,7 @@ class Params:
                                  help='number of forward steps in A2C (default: 300)')
         self.parser.add_argument('--max-steps', type=int, default=78,
                                  help='maximum length of an episode (default: 1)')
-        self.parser.add_argument('--update_num', type=int, default=3,
+        self.parser.add_argument('--update_num', type=int, default=2,
                                  help='')
         self.parser.add_argument('--env_num', type=int, default=1,
                                  help='')

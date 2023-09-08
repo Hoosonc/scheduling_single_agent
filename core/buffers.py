@@ -70,7 +70,7 @@ class Buffer:
         elif self.policy == "ddpg":
             values_next = torch.cat([value for value in self.value_list[1:]], dim=0).view(1, -1)
             self.q_ = torch.cat([value for value in self.value_list[:-1]], dim=0).view(1, -1)
-            self.log_prob = torch.cat([q for q in self.log_prob_list], dim=0).view(1, -1)
+            self.log_prob = torch.cat([q.view(1, -1) for q in self.log_prob_list], dim=0).view(1, -1)
             n_steps = torch.from_numpy(np.arange(rewards.shape[0])).to(device).view(1, -1)
             # rewards = rewards.view(1, -1)
             self.q_returns = rewards + (self.gamma ** n_steps) * (1 - terminals) * values_next
