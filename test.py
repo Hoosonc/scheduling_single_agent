@@ -42,9 +42,7 @@ def transition_time():
 
 
 if __name__ == '__main__':
-
-    a = [1, 2, 3, 4, 5]
-    print(a[: -1])
+    print((1/(1+(math.e**(0.005*(100))))))
     # for i in range(10):
     #     a = np.random.permutation([2, 3, 8, 10])
     #     print(a)

@@ -108,13 +108,14 @@ class Trainer:
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            # if episode % 1 == 0:
-            #     print("loss:", loss.item())
-            #     print("sum_reward:", self.rewards_list)
-            #     print("returns:", self.returns)
-            #     print("p_idle:", self.p_total_idle)
-            #     print("d_idle:", self.d_total_idle)
-            if (episode + 1) % 60 == 0:
+            if episode % 1 == 0:
+                # print("loss:", loss.item())
+                print("sum_reward:", self.rewards_list[episode][0])
+                print("returns:", self.returns[episode][0])
+                print("total_idle", self.p_total_idle[episode][0]+self.d_total_idle[episode][0])
+                # print("p_idle:", self.p_total_idle[episode][0])
+                # print("d_idle:", self.d_total_idle[episode][0])
+            if (episode + 1) % 600 == 0:
                 self.save_data(episode)
                 self.save_model(self.model_name)
 
@@ -141,7 +142,10 @@ class Trainer:
                 q = 0
                 action, value, log_prob = self.choose_action(data, env)
 
-            done, reward = env.step(action, step)
+            job_id = env.state[env.state[:, 4] == 1][action, 3]
+            job_id = job_id.astype("int").reshape(job_id.shape[1], )
+
+            done, reward = env.step(job_id, step)
             if self.policy == "dqn":
                 self.buffer.buffer_list[i].add_data(state_t=data, action_t=action, reward_t=reward,
                                                     terminal_t=done, q=q.view(1, -1))
@@ -174,37 +178,26 @@ class Trainer:
     def choose_action(self, data, env):
         if self.policy == "dqn":
             logits, prob = self.model(data)
-            mask = (env.state[:, 4] == 1)
-            mask = torch.from_numpy(mask).to(device).view(1, -1)
-            # 将无效动作对应的概率值设置为0
-            masked_probs = prob * mask
+            policy_head = Categorical(probs=prob.view(1, -1))
+            if env.state[:, 4].sum() >= env.machines:
+                action_dim = env.machines
+            else:
+                action_dim = int(env.state[:, 4].sum())
+            actions = policy_head.sample((action_dim,))
+            q = torch.sum(logits[0, actions.view(1, -1)])
 
-            # 将有效动作的概率值归一化
-            valid_probs = masked_probs / masked_probs.sum(dim=1)
-
-            action = torch.argmax(valid_probs, dim=1)
-            q = logits[0][action]
-            return action.item(), q, 0
+            return actions.cpu().numpy().reshape(1, -1), q, 0
         else:
             prob, value, log_probs = self.model(data)
-            # mask = (env.state[:, 4] == 1)
-            # mask = torch.from_numpy(mask).to(device).view(1, -1)
-            # # 将无效动作对应的概率值设置为0
-            # masked_probs = prob * mask
-            #
-            # # 将有效动作的概率值归一化
-            # valid_probs = masked_probs / masked_probs.sum(dim=1)
-
             policy_head = Categorical(probs=prob.view(1, -1))
-            # action = policy_head.sample()
-            action = torch.argmax(prob, dim=1)
-            # actions = policy_head.sample((5, ))
-            # ppp = policy_head.log_prob(actions)
 
-            # log_prob = log_probs.view(self.jobs,)[action]
-            job_id = env.state[env.state[:, 4] == 1][action.item(), 3]
-
-            return int(job_id), value, policy_head.log_prob(action)
+            if env.state[:, 4].sum() >= env.machines:
+                action_dim = env.machines
+            else:
+                action_dim = int(env.state[:, 4].sum())
+            actions = policy_head.sample((action_dim, ))
+            log_prob = torch.sum(policy_head.log_prob(actions))
+            return actions.cpu().numpy().reshape(1, -1), value, log_prob
 
     def get_results(self, episode):
         p_idle_list = []

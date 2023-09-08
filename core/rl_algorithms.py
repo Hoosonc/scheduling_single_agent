@@ -34,7 +34,7 @@ class PPOClip:
 
         self.entropy = torch.mean(entropy)
 
-        loss = self.v_loss * self.value_factor - self.pi_loss + self.entropy * self.entropy_factor
+        loss = self.v_loss * self.value_factor - self.pi_loss
 
         self.optimizer.zero_grad()
         loss.backward()

@@ -3,6 +3,7 @@
 # @Author : hxc
 # @File : env.py
 # @Software : PyCharm
+import math
 
 import numpy as np
 import torch
@@ -91,52 +92,53 @@ class Environment:
         self.sum_reward = None
         self.returns = None
 
-    def step(self, action, step):
-        reward = 0.
-        if self.state[action][4] == 0:
-            pass
-        else:
-            process_id = action
-            did = int(self.state[action, 1])
-            pid = int(self.state[process_id, 0])
-            last_schedule_list = self.p_last_schedule
+    def step(self, actions, step):
+        prev_idle = np.sum(self.d_total_idle_time) + np.sum(self.p_total_idle_time)
+        for action in actions:
+            if self.state[action][4] == 0:
+                pass
+            else:
+                process_id = action
+                did = int(self.state[action, 1])
+                pid = int(self.state[process_id, 0])
+                last_schedule_list = self.p_last_schedule
 
-            pro_time = self.state[process_id, 2]
-            insert_data = self.find_position(pid, did, process_id, pro_time)
-            # reward += insert_data[2]
-            insert_data.append(step)
-            insert_data.append(process_id)
+                pro_time = self.state[process_id, 2]
+                insert_data = self.find_position(pid, did, process_id, pro_time)
+                # reward += insert_data[2]
+                insert_data.append(step)
+                insert_data.append(process_id)
 
-            self.d_sc_list[did].append(insert_data)
-            self.d_tasks[did].append([insert_data[2], insert_data[4]])
-            self.p_tasks[pid].append([insert_data[2], insert_data[4]])
-            # 算空隙时间和收集空隙
-            hole_total_time = self.cal_hole(did)
+                self.d_sc_list[did].append(insert_data)
+                self.d_tasks[did].append([insert_data[2], insert_data[4]])
+                self.p_tasks[pid].append([insert_data[2], insert_data[4]])
+                # 算空隙时间和收集空隙
+                hole_total_time = self.cal_hole(did)
 
-            reward += (hole_total_time - self.d_total_idle_time[did])
+                # reward += (hole_total_time - self.d_total_idle_time[did])
 
-            self.d_total_idle_time[did] = hole_total_time
+                self.d_total_idle_time[did] = hole_total_time
 
-            self.p_sc_list[pid].append([did, insert_data[2],
-                                        insert_data[4], insert_data[6]])
-            last_schedule_list[0][pid] += 1
-            if last_schedule_list[0][pid] != 0:
+                self.p_sc_list[pid].append([did, insert_data[2],
+                                            insert_data[4], insert_data[6]])
+                last_schedule_list[0][pid] += 1
+                if last_schedule_list[0][pid] != 0:
 
-                patient_idle_time = self.cal_p_idle(pid)
+                    patient_idle_time = self.cal_p_idle(pid)
 
-                reward += (patient_idle_time - self.p_total_idle_time[pid])
-                self.p_total_idle_time[pid] = patient_idle_time
-                total_idle_time_p = np.sum(self.p_total_idle_time)
-                self.total_idle_time_p = total_idle_time_p
+                    # reward += (patient_idle_time - self.p_total_idle_time[pid])
+                    self.p_total_idle_time[pid] = patient_idle_time
+                    total_idle_time_p = np.sum(self.p_total_idle_time)
+                    self.total_idle_time_p = total_idle_time_p
 
-            reward = 1 - (reward/(self.jobs_length.max()))
-            # print(reward)
-            self.update_states(insert_data[2], pid, did, process_id)
+                self.update_states(insert_data[2], pid, did, process_id)
+        curr_idle = np.sum(self.d_total_idle_time) + np.sum(self.p_total_idle_time)
+
+        reward = 1 - (1/(1+(math.e**(0.005*(-(curr_idle-prev_idle))))))
+        # print(reward)
 
         if sum(self.state[:, 4]) == 0:
             self.done = True
-        if reward < 0:
-            print("========================================")
 
         return self.done, reward
 

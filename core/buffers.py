@@ -76,7 +76,7 @@ class Buffer:
             self.q_returns = rewards + (self.gamma ** n_steps) * (1 - terminals) * values_next
         else:
             values = torch.cat([value for value in self.value_list], dim=0).view(1, -1)
-            log_prob = torch.cat([log_p for log_p in self.log_prob_list], dim=0).view(1, -1)
+            log_prob = torch.cat([log_p.view(1, -1) for log_p in self.log_prob_list], dim=0).view(1, -1)
 
             self.log_prob = log_prob
 
@@ -184,14 +184,14 @@ class BatchBuffer:
         self.states = state_list
         # self.edges = np.array(edge_list)
         self.edges = edge_list
-        # self.edges_attr = np.array(edge_attr_list)
-        self.actions = np.array(action_list)
+
+        self.actions = action_list
         # self.candidate = candidate_list
         if self.policy == "dqn":
             self.q_list = torch.cat([q for q in q_list], dim=0).view(1, -1)
             self.q_returns = torch.cat([ret for ret in q_return_list], dim=0).view(1, -1)
         else:
-            self.log_prob = torch.cat([log_prob for log_prob in log_prob_list], dim=0).view(1, -1)
+            self.log_prob = torch.cat([log_prob.view(1, -1) for log_prob in log_prob_list], dim=0).view(1, -1)
             self.values = torch.cat([value for value in value_list], dim=0).view(1, -1)
 
             if self.policy == "ddpg":
@@ -227,6 +227,7 @@ class BatchBuffer:
 
         for index in select_index:
             buf.state_list.append(self.states[index])
+            buf.action_list.append(self.actions[index])
         if self.policy == "dqn":
             buf.q_ = torch.index_select(self.q_list, dim=1, index=torch.tensor(select_index).to(device))
             buf.q_returns = torch.index_select(self.q_returns, dim=1, index=torch.tensor(select_index).to(device))
@@ -238,9 +239,6 @@ class BatchBuffer:
             buf.returns = torch.index_select(self.returns, dim=1, index=torch.tensor(select_index).to(device))
             buf.adv = torch.index_select(self.adv, dim=1, index=torch.tensor(select_index).to(device))
             # buf.candidate_list.append(self.candidate[index])
-        # buf.edge_attr_list = self.edges_attr[select_index]
-        buf.action_list = self.actions[select_index]
-
         buf.reward_list = self.rewards[select_index]
 
 

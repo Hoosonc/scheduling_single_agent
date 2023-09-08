@@ -34,7 +34,7 @@ class AC(torch.nn.Module):
 
         self.conv3 = GATConv(in_channels=64, out_channels=32, heads=4, concat=False)
         self.Norm3 = nn.BatchNorm1d(32)
-        self.conv4 = GATConv(in_channels=32, out_channels=1, heads=4, concat=False)
+
         self.actor = nn.Sequential(
             Linear(1, 64),
             nn.LayerNorm(64),
@@ -46,17 +46,16 @@ class AC(torch.nn.Module):
         )
 
         self.critic = nn.Sequential(
-            Linear(64, 32),
-            nn.LayerNorm(32),
+            Linear(32, 128),
+            nn.LayerNorm(128),
             # nn.Dropout(),
             nn.ReLU(),
-            Linear(32, 32),
+            Linear(128, 32),
             nn.LayerNorm(32),
             # nn.Dropout(),
             nn.ReLU(),
             Linear(32, 1)
         )
-        self.mini_bf_list = [mini_bf() for _ in range(20)]
 
     def forward(self, data):
 
@@ -66,14 +65,12 @@ class AC(torch.nn.Module):
         x = self.Norm2(self.conv2(x, data.edge_index))
         x = f.elu(x)
         x = f.dropout(x, training=True)
-        # x = self.conv3(x, data.edge_index)
-        # x = f.dropout(x, training=True)
+        x = self.Norm3(self.conv3(x, data.edge_index))
+        x = f.dropout(x, training=True)
         pooled_x = global_mean_pool(x, None)
 
-        # actor = self.conv4(self.Norm3(self.conv3(x, data.edge_index)), data.edge_index)
         actor = self.get_actor(data.x, x)
         value = self.critic(pooled_x).view(1, 1)
-        # logits = torch.tanh(self.actor(concateFea)).view(1, -1)
         logits = torch.tanh(actor).view(1, -1)
         prob = f.softmax(logits, dim=1)
         log_prob = f.log_softmax(logits, dim=1)
@@ -90,51 +87,17 @@ class AC(torch.nn.Module):
         log_prob_list = []
         value_list = []
         entropy = []
-        t_list = []
-        # 20个线程，每个线程获取多个step的值
-        mini_batch = len(buf.state_list) // 20
-        remainder = len(buf.state_list) % 20
-        for i in range(20):
-            start = i * mini_batch
-            end = (i+1) * mini_batch
-            if i == 19:
-                end += remainder
-            t = Thread(target=self.get_forward, args=(buf, start, end, i))
-            t.start()
-            t_list.append(t)
 
-        for thread in t_list:
-            thread.join()
-
-        for bf in self.mini_bf_list:
-            value_list.extend(bf.value_list)
-            log_prob_list.extend(bf.log_prob_list)
-            entropy.extend(bf.entropy)
-            bf.reset()
+        for i in range(len(buf.state_list)):
+            p, v, log_p = self.forward(buf.state_list[i])
+            policy_head = Categorical(probs=p)
+            value_list.append(v)
+            a = torch.from_numpy(buf.action_list[i]).view(-1, 1).to(device)
+            log_prob_list.append(torch.sum(policy_head.log_prob(a)).view(1, -1))
+            entropy.append(policy_head.entropy())
 
         values = torch.cat(value_list, dim=0).view(1, -1)
         log_prob = torch.cat(log_prob_list, dim=0).view(1, -1)
         entropy = torch.cat(entropy, dim=0).view(1, -1)
 
         return values, log_prob, entropy
-
-    def get_forward(self, buf, start, end, bf_nb):
-        for i in range(start, end):
-            p, v, log_p = self.forward(buf.state_list[i])
-            policy_head = Categorical(probs=p)
-            self.mini_bf_list[bf_nb].value_list.append(v)
-            self.mini_bf_list[bf_nb].log_prob_list.append(policy_head.log_prob(
-                torch.tensor(buf.action_list[i]).to(device)))
-            self.mini_bf_list[bf_nb].entropy.append(policy_head.entropy())
-
-
-class mini_bf:
-    def __init__(self):
-        self.log_prob_list = []
-        self.value_list = []
-        self.entropy = []
-
-    def reset(self):
-        self.log_prob_list = []
-        self.value_list = []
-        self.entropy = []
