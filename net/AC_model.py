@@ -36,13 +36,13 @@ class AC(torch.nn.Module):
         self.Norm3 = nn.BatchNorm1d(32)
 
         self.actor = nn.Sequential(
-            Linear(1, 64),
+            Linear(32, 128),
+            nn.LayerNorm(128),
+            nn.ReLU(),
+            Linear(128, 64),
             nn.LayerNorm(64),
             nn.ReLU(),
-            Linear(64, 32),
-            nn.LayerNorm(32),
-            nn.ReLU(),
-            Linear(32, 1)
+            Linear(64, 1)
         )
 
         self.critic = nn.Sequential(
@@ -58,8 +58,8 @@ class AC(torch.nn.Module):
         )
 
     def forward(self, data):
-
-        x = self.Norm1(self.conv1(data.x, data.edge_index))
+        in_x = data.x[:, 1:-1]
+        x = self.Norm1(self.conv1(in_x, data.edge_index))
         x = f.elu(x)
         x = f.dropout(x, training=True)
         x = self.Norm2(self.conv2(x, data.edge_index))
@@ -78,10 +78,13 @@ class AC(torch.nn.Module):
         return prob, value, log_prob
 
     def get_actor(self, fea, emb_fea):
-        selected_rows = torch.where(fea[:, 1] == 1)[0]
-        filtered_second_tensor = emb_fea[selected_rows, :]
-        pooled_x = torch.mean(filtered_second_tensor, dim=1, keepdim=True)
-        return self.actor(pooled_x)
+        # 找出满足条件的行索引
+        condition = (fea[:, 2] == 1) & (fea[:, 5] == 0)
+        indices = torch.nonzero(condition).squeeze()
+        filtered_second_tensor = emb_fea[indices, :]
+
+        # pooled_x = torch.mean(filtered_second_tensor, dim=1, keepdim=True)
+        return self.actor(filtered_second_tensor)
 
     def get_batch_p_v(self, buf):
         log_prob_list = []

@@ -48,8 +48,34 @@ def adjust_params():
     df.to_csv("./data/adjust_1.csv", index=False)
 
 
+def adjust_sc():
+    params = Params()
+    params.args.policy = "ppo2"
+    params.gamma = 0.99
+    params.args.lr = 0.00001
+    n = 0
+    file_list = []
+    for file_id in range(5):
+        params.args.file_id = file_id
+        params.args.lr = 0.00001
+        for single_num in params.single_sample:
+            params.args.action_dim = single_num
+            params.args.file_name = n
+            trainer = Trainer(params.args)
+            print(f"--single_num:{single_num} start training!")
+            trainer.train()
+            n += 1
+            trainer.save_model(trainer.model_name)
+
+            file_list.append([n, file_id, single_num])
+
+    df = pd.DataFrame(data=file_list, columns=["file", "file_id", "single_num"])
+    df.to_csv("./data/adjust_sc_1.csv", index=False)
+
+
 if __name__ == '__main__':
-    adjust_params()
+    # adjust_params()
+    adjust_sc()
     # trainer = Trainer()
     # trainer.train()
     # trainer.save_model(trainer.model_name)

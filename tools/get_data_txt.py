@@ -27,15 +27,21 @@ def get_data_csv(env_id, path=None):
         jobs_length[m[0]] = m[1]["pro_time"].sum()
         d_reg_num[m[0]] = m[1].groupby("pid").count().shape[0]
         m_all_task_list[m[0]].extend(m[1]["id"].values.tolist())
-
+    is_multi = np.zeros((df.shape[0],))
     multi_task = []
+    multi_job_num = 0
+    multi_pid = []
     for j in df.groupby('pid'):
         if j[1].shape[0] > 1:
+            multi_job_num += 1
+            multi_pid.append(j[0])
             multi_task.extend(j[1]["id"].values.tolist())
+            is_multi[j[1]["id"].values] = 1
         j_all_task_list[j[0]].extend(j[1]["id"].values.tolist())
 
     return (df.values, jobs, machines, max_time_op, jobs_length,
-            sum_op, d_reg_num, j_all_task_list, m_all_task_list, multi_task)
+            sum_op, d_reg_num, j_all_task_list, m_all_task_list,
+            multi_task, multi_job_num, multi_pid, is_multi)
 
 
 def get_data(path):

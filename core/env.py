@@ -20,7 +20,7 @@ class Environment:
         (self.all_job_list, self.jobs, self.machines,
          self.max_time_op, self.jobs_length, self.sum_op,
          self.d_reg_num, self.p_all_task, self.d_all_task,
-         self.multi_tasks) = get_data_csv(args.file_id)
+         self.multi_tasks, self.multi_job_num, self.multi_pid, self.is_multi) = get_data_csv(args.file_id)
         self.reg_num = self.all_job_list.shape[0]
         self.j_edge_matrix = None
         self.m_edge_matrix = None
@@ -55,17 +55,19 @@ class Environment:
         self.idle_total = []
         self.sum_reward = None
         self.returns = None
+        self.multi_pid_choose = None
 
     def reset(self):
         self.state = self.all_job_list.copy()
         self.state = np.concatenate([self.state, np.ones((self.state.shape[0], 1))], axis=1)  # 添加“是否处理”
         self.state = np.concatenate([self.state, np.zeros((self.state.shape[0], 2))], axis=1)  # add “开始时间” 和 ”最早开始时间“
+        self.state = np.concatenate([self.state, self.is_multi.reshape(-1, 1)], axis=1)
         self.j_edge_matrix = np.eye(self.reg_num, dtype="int64")
         self.m_edge_matrix = np.eye(self.reg_num, dtype="int64")
         self.init_edge_matrix()
         # add a column 'id'
         # self.state = np.concatenate([self.state, np.arange(self.state.shape[0]).reshape(-1, 1)], axis=1)
-
+        self.multi_pid_choose = self.multi_pid.copy()
         self.p_last_schedule = np.zeros((2, self.jobs))  # 上一个号的结束时间
         """
              [[已处理号数]
