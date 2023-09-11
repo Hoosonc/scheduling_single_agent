@@ -4,9 +4,11 @@
 # @File    : seaborn_drawer.py
 # @Software: PyCharm
 import seaborn as sns
+from scipy.signal import savgol_filter
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 import matplotlib.pyplot as plt
+from data_pro import get_sc_data
 import numpy as np
 
 
@@ -50,10 +52,25 @@ def sub_plots(data_frame):
     plt.show()
 
 
+def line_plot(data_frame):
+    plt.figure(figsize=(10, 6), dpi=200)  # 设置图形大小
+    sns.set_theme(style="white")
+    # fmri = sns.load_dataset("fmri")
+    # sns.relplot(x="timepoint", y="signal", kind="line", data=fmri)
+
+    # Plot the responses for different events and regions
+    sns.relplot(x="Episodes", y="Idle time of doctors", data=data_frame,
+                kind="line", col="Sample_num", col_wrap=5)
+    # 使用 seaborn.lmplot 添加平滑曲线（线性回归）
+    # sns.lmplot(x='Episode', y='Idle time of doctor', data=data_frame, ci=None)
+    # 显示图形
+    plt.show()
+
+
 def plot(data_frame):
     # sns.set_theme(style="ticks")
     # 设置样式
-    plt.figure(figsize=(10, 6), dpi=200)  # 设置图形大小
+    plt.figure(figsize=(300, 10), dpi=200)  # 设置图形大小
     sns.set(style="darkgrid")
     colors = ["#E44C4A", "#E17A1D", "#007EB1"]  # 自定义颜色列表
     sns.lineplot(data=data_frame.drop('ep', axis=1), dashes=False, palette=colors)  # 绘制折线图
@@ -67,11 +84,12 @@ def plot(data_frame):
 
 if __name__ == '__main__':
     scale = MinMaxScaler(feature_range=(0, 1))
-    df = pd.read_csv("../data/reward.csv")
-    df.iloc[:, [0, 1, 2]] = np.log(df.iloc[:, [0, 1, 2]])
-    df.iloc[:, [0, 1, 2]] = scale.fit_transform(df.iloc[:, [0, 1, 2]])
-    # plot(df)
-    sub_plots(df)
+    # df = get_sc_data()
+
+    fmri = sns.load_dataset("fmri")
+    sns.relplot(x="timepoint", y="signal", kind="line", data=fmri)
+
+    # line_plot(df)
 
 
 

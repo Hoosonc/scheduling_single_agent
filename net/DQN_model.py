@@ -20,7 +20,7 @@ class DQN(torch.nn.Module):
     def __init__(self):
         super(DQN, self).__init__()
 
-        self.conv1 = GATConv(in_channels=4, out_channels=128, heads=4, concat=False)
+        self.conv1 = GATConv(in_channels=5, out_channels=128, heads=4, concat=False)
         self.Norm1 = nn.BatchNorm1d(128)
 
         self.conv2 = GATConv(in_channels=128, out_channels=64, heads=4, concat=False)
@@ -39,7 +39,7 @@ class DQN(torch.nn.Module):
         )
 
     def forward(self, data):
-        in_x = data.x[:, 1:-1]
+        in_x = data.x[:, :-1]
         x = self.Norm1(self.conv1(in_x, data.edge_index))
         x = f.elu(x)
         x = f.dropout(x, training=True)
@@ -56,7 +56,8 @@ class DQN(torch.nn.Module):
 
     def get_actor(self, fea, emb_fea):
         # 找出满足条件的行索引
-        condition = (fea[:, 2] == 1) & (fea[:, 5] == 0)
+        # condition = (fea[:, 2] == 1) & (fea[:, 5] == 0)
+        condition = (fea[:, 2] == 1)
         indices = torch.nonzero(condition).squeeze()
         filtered_second_tensor = emb_fea[indices, :]
 

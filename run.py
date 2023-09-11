@@ -38,6 +38,7 @@ def adjust_params():
                     params.args.gamma = dr
                     params.args.file_name = n
                     trainer = Trainer(params.args)
+
                     trainer.train()
                     n += 1
                     trainer.save_model(trainer.model_name)
@@ -55,14 +56,15 @@ def adjust_sc():
     params.args.lr = 0.00001
     n = 0
     file_list = []
-    for file_id in range(5):
+    for file_id in range(1):
         params.args.file_id = file_id
-        params.args.lr = 0.00001
+        # params.args.lr = 0.00001
         for single_num in params.single_sample:
             params.args.action_dim = single_num
             params.args.file_name = n
             trainer = Trainer(params.args)
             print(f"--single_num:{single_num} start training!")
+            # trainer.scheduler = StepLR(trainer.algorithm.optimizer, step_size=232, gamma=0.9)
             trainer.train()
             n += 1
             trainer.save_model(trainer.model_name)

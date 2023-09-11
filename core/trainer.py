@@ -109,14 +109,14 @@ class Trainer:
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            if episode % 1 == 0:
-                print("loss:", loss.item())
-                print("sum_reward:", self.rewards_list[episode][0])
-                print("returns:", self.returns[episode][0])
-                print("total_idle", self.p_total_idle[episode][0]+self.d_total_idle[episode][0])
-                print("p_idle:", self.p_total_idle[episode][0])
-                print("d_idle:", self.d_total_idle[episode][0])
-            if (episode + 1) % 60000 == 0:
+            # if episode % 1 == 0:
+            #     print("loss:", loss.item())
+            #     print("sum_reward:", self.rewards_list[episode][0])
+            #     print("returns:", self.returns[episode][0], episode)
+                # print("total_idle", self.p_total_idle[episode][0]+self.d_total_idle[episode][0])
+                # print("p_idle:", self.p_total_idle[episode][0])
+                # print("d_idle:", self.d_total_idle[episode][0])
+            if (episode + 1) % 60 == 0:
                 self.save_data(episode)
                 self.save_model(self.model_name)
 
@@ -124,8 +124,8 @@ class Trainer:
         buffer = self.buffer.buffer_list[i]
         done = False
         for step in range(300):
-            data = env.state[:, [0, 2, 4, 5, 6, 7]].copy()
-            # data[:, [1, 3, 4]] = data[:, [1, 3, 4]] / (env.jobs_length.max())
+            data = env.state[:, [0, 1, 2, 4, 5, 6]].copy()
+            data[:, [2, 4]] = data[:, [2, 4]] / (env.jobs_length.max())
             m_edge_index = coo_matrix(env.m_edge_matrix)
             m_edge_index = np.array([m_edge_index.row, m_edge_index.col])
             np.fill_diagonal(env.j_edge_matrix, 0)
@@ -138,15 +138,16 @@ class Trainer:
             data = Data(x=data, edge_index=edge_index, num_nodes=len(data))
             if self.policy == "dqn":
                 value, log_prob = 0, 0
-                action, q, _, multi_task = self.choose_action(data, env)
+                action, q, _ = self.choose_action(data, env)
             else:
                 q = 0
-                action, value, log_prob, multi_task = self.choose_action(data, env)
+                action, value, log_prob = self.choose_action(data, env)
             temp_s = env.state[env.state[:, 4] == 1]
-            job_id = temp_s[temp_s[:, 7] == 0][action, 3]
+            # job_id = temp_s[temp_s[:, 7] == 0][action, 3]
+            job_id = temp_s[action, 3]
             # job_id = job_id.astype("int")
-            job_id = np.append(np.array(multi_task), job_id)
-            job_id = job_id.astype("int")
+            # job_id = np.append(np.array(multi_task), job_id)
+            job_id = job_id.astype("int").reshape(job_id.shape[1],)
             # np.random.shuffle(job_id)
             done, reward = env.step(job_id, step)
             if self.policy == "dqn":
@@ -180,20 +181,20 @@ class Trainer:
 
     def choose_action(self, data, env):
 
-        if len(env.multi_pid_choose) > 0:
-            multi_task = []
-            if len(env.multi_pid_choose) < 1:
-                sam_num = len(env.multi_pid_choose)
-            else:
-                sam_num = 1
-            choose_multi_id = np.random.choice(a=len(env.multi_pid_choose), size=sam_num, p=None, replace=False)
-            for choose_id in choose_multi_id:
-                pid = env.multi_pid_choose[choose_id]
-                multi_task.extend(env.p_all_task[pid])
-            for choose_id in choose_multi_id[np.argsort(choose_multi_id)[::-1]]:
-                del env.multi_pid_choose[choose_id]
-        else:
-            multi_task = []
+        # if len(env.multi_pid_choose) > 0:
+        #     multi_task = []
+        #     if len(env.multi_pid_choose) < 1:
+        #         sam_num = len(env.multi_pid_choose)
+        #     else:
+        #         sam_num = 1
+        #     choose_multi_id = np.random.choice(a=len(env.multi_pid_choose), size=sam_num, p=None, replace=False)
+        #     for choose_id in choose_multi_id:
+        #         pid = env.multi_pid_choose[choose_id]
+        #         multi_task.extend(env.p_all_task[pid])
+        #     for choose_id in choose_multi_id[np.argsort(choose_multi_id)[::-1]]:
+        #         del env.multi_pid_choose[choose_id]
+        # else:
+        #     multi_task = []
         if self.policy == "dqn":
             logits, prob = self.model(data)
             policy_head = Categorical(probs=prob.view(1, -1))
@@ -205,7 +206,7 @@ class Trainer:
             q = torch.sum(logits[0, actions.view(1, -1)])
             # ac = np.append(actions.cpu().numpy().reshape(1, -1), multi_task)
             # ac = np.random.shuffle(ac)
-            return actions.cpu().numpy().reshape(1, -1), q, 0, multi_task
+            return actions.cpu().numpy().reshape(1, -1), q, 0
         else:
             prob, value, log_probs = self.model(data)
 
@@ -216,10 +217,10 @@ class Trainer:
             else:
                 action_dim = int(env.state[:, 4].sum())
             actions = policy_head.sample((action_dim, ))
-            log_prob = torch.sum(policy_head.log_prob(actions))
-            ac = np.append(actions.cpu().numpy().reshape(1, -1), multi_task)
+            log_prob = torch.mean(policy_head.log_prob(actions))
+            # ac = np.append(actions.cpu().numpy().reshape(1, -1), multi_task)
             # ac = np.random.shuffle(ac)
-            return actions.cpu().numpy().reshape(1, -1), value, log_prob, multi_task
+            return actions.cpu().numpy().reshape(1, -1), value, log_prob
 
     def get_results(self, episode):
         p_idle_list = []

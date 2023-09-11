@@ -17,7 +17,7 @@ class Params:
         self.decay_episodes = []
         self.discount_rate = [0.99]  # [0.99, 0.9, 1, 0.999]
         self.policy_list = ["ppo2"]  # ["ppo2", "AC", "ddpg", "dqn"]
-        self.single_sample = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        self.single_sample = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
         self.multi_sample = [1, 2, 3, 4, 5]
 
     def get_parser(self):
@@ -29,7 +29,7 @@ class Params:
                                  help='discount factor for rewards (default: 0.99)')
         self.parser.add_argument('--gae-lambda', type=float, default=0.95,
                                  help='lambda parameter for GAE (default: 1.00)')
-        self.parser.add_argument('--entropy-coefficient', type=float, default=0.05,
+        self.parser.add_argument('--entropy-coefficient', type=float, default=0.01,
                                  help='entropy term coefficient (default: 0.01)')
         self.parser.add_argument('--value-loss-coefficient', type=float, default=0.5,
                                  help='value loss coefficient (default: 0.5)')

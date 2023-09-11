@@ -26,7 +26,7 @@ class AC(torch.nn.Module):
         super(AC, self).__init__()
         # torch.manual_seed(2022)
 
-        self.conv1 = GATConv(in_channels=4, out_channels=128, heads=4, concat=False)
+        self.conv1 = GATConv(in_channels=5, out_channels=128, heads=4, concat=False)
         self.Norm1 = nn.BatchNorm1d(128)
 
         self.conv2 = GATConv(in_channels=128, out_channels=64, heads=4, concat=False)
@@ -37,28 +37,28 @@ class AC(torch.nn.Module):
 
         self.actor = nn.Sequential(
             Linear(32, 128),
-            nn.LayerNorm(128),
-            nn.ReLU(),
+            # nn.LayerNorm(128),
+            # nn.ReLU(),
             Linear(128, 64),
-            nn.LayerNorm(64),
-            nn.ReLU(),
+            # nn.LayerNorm(64),
+            # nn.ReLU(),
             Linear(64, 1)
         )
 
         self.critic = nn.Sequential(
             Linear(32, 128),
-            nn.LayerNorm(128),
+            # nn.LayerNorm(128),
             # nn.Dropout(),
-            nn.ReLU(),
+            # nn.ReLU(),
             Linear(128, 32),
-            nn.LayerNorm(32),
+            # nn.LayerNorm(32),
             # nn.Dropout(),
-            nn.ReLU(),
+            # nn.ReLU(),
             Linear(32, 1)
         )
 
     def forward(self, data):
-        in_x = data.x[:, 1:-1]
+        in_x = data.x[:, :-1]
         x = self.Norm1(self.conv1(in_x, data.edge_index))
         x = f.elu(x)
         x = f.dropout(x, training=True)
@@ -79,10 +79,10 @@ class AC(torch.nn.Module):
 
     def get_actor(self, fea, emb_fea):
         # 找出满足条件的行索引
-        condition = (fea[:, 2] == 1) & (fea[:, 5] == 0)
+        # condition = (fea[:, 2] == 1) & (fea[:, 5] == 0)
+        condition = (fea[:, 3] == 1)
         indices = torch.nonzero(condition).squeeze()
         filtered_second_tensor = emb_fea[indices, :]
-
         # pooled_x = torch.mean(filtered_second_tensor, dim=1, keepdim=True)
         return self.actor(filtered_second_tensor)
 
@@ -96,7 +96,7 @@ class AC(torch.nn.Module):
             policy_head = Categorical(probs=p)
             value_list.append(v)
             a = torch.from_numpy(buf.action_list[i]).view(-1, 1).to(device)
-            log_prob_list.append(torch.sum(policy_head.log_prob(a)).view(1, -1))
+            log_prob_list.append(torch.mean(policy_head.log_prob(a)).view(1, -1))
             entropy.append(policy_head.entropy())
 
         values = torch.cat(value_list, dim=0).view(1, -1)

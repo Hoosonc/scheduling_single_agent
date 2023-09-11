@@ -45,16 +45,7 @@ if __name__ == '__main__':
     import torch
 
     # 创建一个示例的N*M的tensor
-    tensor = torch.tensor([[1, 0, 3],
-                           [1, 0, 5],
-                           [1, 1, 0],
-                           [1, 0, 0]])
-
-    # 找出满足条件的行索引
-    condition = (tensor[:, 0] == 1) & (tensor[:, 1] == 0)
-    indices = torch.nonzero(condition).squeeze()
-
-    print(indices)
+    print(1/(1+(math.e**(0.1*(-(0))))))
     # for i in range(10):
     #     a = np.random.permutation([2, 3, 8, 10])
     #     print(a)

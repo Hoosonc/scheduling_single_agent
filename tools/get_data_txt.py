@@ -14,6 +14,7 @@ def get_data_csv(env_id, path=None):
     else:
         df = pd.read_csv(f"./data/simulation_instances/{int(env_id + 1)}.csv")
     df = df.sort_values("did")
+    # df = df.sample(frac=1, random_state=2023)
     df["id"] = [i for i in range(df.shape[0])]
     max_time_op = 0
     sum_op = df["pro_time"].sum()
