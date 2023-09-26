@@ -56,8 +56,13 @@ class Environment:
         self.sum_reward = None
         self.returns = None
         self.multi_pid_choose = None
+        self.random_id = None
 
     def reset(self):
+        (self.all_job_list, self.jobs, self.machines,
+         self.max_time_op, self.jobs_length, self.sum_op,
+         self.d_reg_num, self.p_all_task, self.d_all_task,
+         self.multi_tasks, self.multi_job_num, self.multi_pid, self.is_multi) = get_data_csv(self.args.file_id)
         self.state = self.all_job_list.copy()
         self.state = np.concatenate([self.state, np.ones((self.state.shape[0], 1))], axis=1)  # 添加“是否处理”
         self.state = np.concatenate([self.state, np.zeros((self.state.shape[0], 1))], axis=1)  # add “开始时间”

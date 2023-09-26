@@ -3,6 +3,8 @@
 # @Author : hxc
 # @File : trainer.py
 # @Software : PyCharm
+import time
+
 from core.env import Environment
 import numpy as np
 import torch
@@ -76,7 +78,6 @@ class Trainer:
     def train(self):
 
         for episode in range(self.args.episode):
-
             self.sum_reward = []
             t_list = []
             # for i in range(self.args.env_num):
@@ -111,8 +112,8 @@ class Trainer:
 
             # if episode % 1 == 0:
             #     print("loss:", loss.item())
-            #     print("sum_reward:", self.rewards_list[episode][0])
-            #     print("returns:", self.returns[episode][0], episode)
+                # print("sum_reward:", self.rewards_list[episode][0])
+                # print("returns:", self.returns[episode][0], episode)
                 # print("total_idle", self.p_total_idle[episode][0]+self.d_total_idle[episode][0])
                 # print("p_idle:", self.p_total_idle[episode][0])
                 # print("d_idle:", self.d_total_idle[episode][0])
@@ -145,10 +146,8 @@ class Trainer:
             temp_s = env.state[env.state[:, 4] == 1]
             # job_id = temp_s[temp_s[:, 7] == 0][action, 3]
             job_id = temp_s[action, 3]
-            # job_id = job_id.astype("int")
-            # job_id = np.append(np.array(multi_task), job_id)
+
             job_id = job_id.astype("int").reshape(job_id.shape[1],)
-            # np.random.shuffle(job_id)
             done, reward = env.step(job_id, step)
             if self.policy == "dqn":
                 self.buffer.buffer_list[i].add_data(state_t=data, action_t=action, reward_t=reward,
@@ -180,29 +179,18 @@ class Trainer:
             env.returns = buffer.returns[0][0].item()
 
     def choose_action(self, data, env):
-
-        # if len(env.multi_pid_choose) > 0:
-        #     multi_task = []
-        #     if len(env.multi_pid_choose) < 1:
-        #         sam_num = len(env.multi_pid_choose)
-        #     else:
-        #         sam_num = 1
-        #     choose_multi_id = np.random.choice(a=len(env.multi_pid_choose), size=sam_num, p=None, replace=False)
-        #     for choose_id in choose_multi_id:
-        #         pid = env.multi_pid_choose[choose_id]
-        #         multi_task.extend(env.p_all_task[pid])
-        #     for choose_id in choose_multi_id[np.argsort(choose_multi_id)[::-1]]:
-        #         del env.multi_pid_choose[choose_id]
-        # else:
-        #     multi_task = []
         if self.policy == "dqn":
             logits, prob = self.model(data)
-            policy_head = Categorical(probs=prob.view(1, -1))
+            # policy_head = Categorical(probs=prob.view(1, -1))
             if env.state[:, 4].sum() >= self.action_dim:
                 action_dim = self.action_dim
             else:
                 action_dim = int(env.state[:, 4].sum())
-            actions = policy_head.sample((action_dim,))
+            # 找到前两个最大值及其索引
+            # top_values, top_indices = torch.topk(prob, k=action_dim)
+            # actions = policy_head.sample((action_dim,))
+            top_values, top_indices = torch.topk(prob, k=action_dim)
+            actions = top_indices
             q = torch.sum(logits[0, actions.view(1, -1)])
             # ac = np.append(actions.cpu().numpy().reshape(1, -1), multi_task)
             # ac = np.random.shuffle(ac)
@@ -216,7 +204,10 @@ class Trainer:
                 action_dim = self.action_dim
             else:
                 action_dim = int(env.state[:, 4].sum())
-            actions = policy_head.sample((action_dim, ))
+            # actions = policy_head.sample((action_dim, ))
+            # 使用torch.topk函数获取前N个最大值及其索引
+            top_values, top_indices = torch.topk(prob, k=action_dim)
+            actions = top_indices
             log_prob = torch.mean(policy_head.log_prob(actions))
             # ac = np.append(actions.cpu().numpy().reshape(1, -1), multi_task)
             # ac = np.random.shuffle(ac)

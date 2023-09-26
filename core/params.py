@@ -13,17 +13,18 @@ class Params:
         self.args = self.parser.parse_args()
         self.lr_list = [0.00001]
         # self.lr_list = [0.00001]
-        self.lr_decay_list = []  # [0.001, 0.0001]
+        self.lr_decay_list = [0.001, 0.0001]
         self.decay_episodes = []
-        self.discount_rate = [0.99]  # [0.99, 0.9, 1, 0.999]
-        self.policy_list = ["ppo2"]  # ["ppo2", "AC", "ddpg", "dqn"]
-        self.single_sample = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+        self.discount_rate = [0.9, 1, 0.999]
+        self.policy_list = ["AC", "ddpg", "dqn"]  # [ "AC", "ddpg", "dqn", "ppo2"]
+        self.single_sample = [9, 8, 7, 6, 5, 4, 3, 2, 1]
         self.multi_sample = [1, 2, 3, 4, 5]
+        self.env_num = [1]
 
     def get_parser(self):
         self.parser.add_argument('--lr', type=float, default=0.01,
                                  help='learning rate (default: 0.0001)')
-        self.parser.add_argument('--epsilon', type=float, default=0.3,
+        self.parser.add_argument('--epsilon', type=float, default=0.2,
                                  help='epsilon (default: 0.3)')
         self.parser.add_argument('--gamma', type=float, default=1,
                                  help='discount factor for rewards (default: 0.99)')
@@ -57,5 +58,5 @@ class Params:
                                  help='')
         self.parser.add_argument('--file-id', type=str, default='1',
                                  help='')
-        self.parser.add_argument('--action-dim', type=str, default='1',
+        self.parser.add_argument('--action-dim', type=str, default='4',
                                  help='')

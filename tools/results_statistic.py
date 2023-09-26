@@ -37,7 +37,6 @@ if __name__ == '__main__':
         target_median, target_iqr = get_med_iqr(target_df["d_idle"].values)
         print("median:", target_median)
         print("iqr:", target_iqr)
-        # for method in ["LWKR", "MWKR", "LPT", "SPT"]:
         for method in ["ACO"]:
             print(method)
             df = pd.read_csv(f"../data/simulation_results/result_{method}_{file}")

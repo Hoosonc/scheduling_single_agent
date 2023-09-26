@@ -42,10 +42,21 @@ def transition_time():
 
 
 if __name__ == '__main__':
-    import torch
+    array = np.array([[1, 2, 3],
+                      [4, 5, 6],
+                      [7, 8, 9],
+                      [11, 12, 13],
+                      [14, 15, 16],
+                      [17, 18, 19]
+                      ])
 
+    # 使用numpy.random.shuffle()按行打乱数组
+    np.random.shuffle(array)
+
+    print("按行打乱后的数组：")
+    print(array)
     # 创建一个示例的N*M的tensor
-    print(1/(1+(math.e**(0.1*(-(0))))))
+    # print(1/(1+(math.e**(0.1*(-(0))))))
     # for i in range(10):
     #     a = np.random.permutation([2, 3, 8, 10])
     #     print(a)

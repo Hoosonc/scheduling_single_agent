@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 # from threading import Thread
 from torch.nn import Linear
-from threading import Thread
 # from torch_geometric.nn import GIN
 from torch_geometric.nn import global_mean_pool
 from torch_geometric.nn import GATConv
@@ -36,7 +35,7 @@ class AC(torch.nn.Module):
         self.Norm3 = nn.BatchNorm1d(32)
 
         self.actor = nn.Sequential(
-            Linear(32, 128),
+            Linear(1, 128),
             # nn.LayerNorm(128),
             # nn.ReLU(),
             Linear(128, 64),
@@ -68,8 +67,7 @@ class AC(torch.nn.Module):
         x = self.Norm3(self.conv3(x, data.edge_index))
         x = f.dropout(x, training=True)
         pooled_x = global_mean_pool(x, None)
-
-        actor = self.get_actor(data.x, x)
+        actor = self.get_actor(data.x, x, pooled_x)
         value = self.critic(pooled_x).view(1, 1)
         logits = torch.tanh(actor).view(1, -1)
         prob = f.softmax(logits, dim=1)
@@ -77,14 +75,17 @@ class AC(torch.nn.Module):
 
         return prob, value, log_prob
 
-    def get_actor(self, fea, emb_fea):
-        # 找出满足条件的行索引
-        # condition = (fea[:, 2] == 1) & (fea[:, 5] == 0)
+    def get_actor(self, fea, emb_fea, pooled_x):
+
+        pooled_x = pooled_x.view(-1, 1)
         condition = (fea[:, 3] == 1)
-        indices = torch.nonzero(condition).squeeze()
-        filtered_second_tensor = emb_fea[indices, :]
-        # pooled_x = torch.mean(filtered_second_tensor, dim=1, keepdim=True)
-        return self.actor(filtered_second_tensor)
+        action_num = torch.sum(condition)
+        indices = torch.nonzero(condition).view(action_num,)
+        filtered_second_tensor = emb_fea[indices]
+
+        actor_input = torch.mm(filtered_second_tensor, pooled_x)
+
+        return self.actor(actor_input)
 
     def get_batch_p_v(self, buf):
         log_prob_list = []
